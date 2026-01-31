@@ -13,37 +13,310 @@
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
+        
+        /* ヘッダー */
+        .header {
+            background: #4285f4;
+            color: white;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            position: relative;
+            z-index: 100;
+        }
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        /* CSVアップロードボタン */
+        .upload-btn {
+            background: white;
+            color: #4285f4;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .upload-btn:hover {
+            background: #f0f0f0;
+        }
+        
+        /* 件数表示 */
+        .count-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            margin-left: auto;
+        }
+        
+        /* 地図 */
         #map {
             width: 100%;
-            height: 100vh;
+            height: calc(100vh - 56px);
+        }
+        
+        /* ファイル入力を隠す */
+        #csvInput {
+            display: none;
+        }
+        
+        /* ローディング */
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 20px 40px;
+            border-radius: 10px;
+            z-index: 1000;
+            display: none;
+        }
+        .loading.show {
+            display: block;
+        }
+        
+        /* 会社名ラベルのスタイル */
+        .marker-label {
+            background: white;
+            border: 2px solid #4285f4;
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-size: 11px;
+            font-weight: bold;
+            white-space: nowrap;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
     </style>
 </head>
 <body>
+    <div class="header">
+        <h1>🗺️ メンテナンスマップ</h1>
+        <button class="upload-btn" onclick="document.getElementById('csvInput').click()">
+            📁 CSV読込
+        </button>
+        <div class="count-badge" id="countBadge">0件</div>
+    </div>
+    
+    <input type="file" id="csvInput" accept=".csv" onchange="handleCSV(event)">
+    
     <div id="map"></div>
+    
+    <div class="loading" id="loading">
+        📍 住所を変換中...<br>
+        <span id="loadingProgress"></span>
+    </div>
 
     <script>
+        let map;
+        let markers = [];
+        let infoWindow;
+        
         function initMap() {
             // 千代田区を中心に設定
             const chiyoda = { lat: 35.6939, lng: 139.7535 };
             
-            const map = new google.maps.Map(document.getElementById('map'), {
-                zoom: 14,
+            map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 12,
                 center: chiyoda,
             });
-
-            // テスト用のピンを1つ立てる
-            new google.maps.Marker({
-                position: chiyoda,
-                map: map,
-                title: 'テストピン：千代田区'
+            
+            // 情報ウィンドウ（吹き出し）を1つだけ作成
+            infoWindow = new google.maps.InfoWindow();
+        }
+        
+        // CSVファイルを読み込む
+        function handleCSV(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                parseCSV(text);
+            };
+            reader.readAsText(file, 'UTF-8');
+        }
+        
+        // CSVをパースする
+        function parseCSV(text) {
+            const lines = text.trim().split('\n');
+            const headers = lines[0].split(',');
+            
+            const data = [];
+            for (let i = 1; i < lines.length; i++) {
+                const values = parseCSVLine(lines[i]);
+                if (values.length >= 5) {
+                    data.push({
+                        no: values[0] || '',
+                        company: values[1] || '',
+                        address: values[2] || '',
+                        phone: values[3] || '',
+                        contact: values[4] || '',
+                        info: values[5] || ''
+                    });
+                }
+            }
+            
+            if (data.length > 0) {
+                geocodeAddresses(data);
+            } else {
+                alert('CSVにデータがありません');
+            }
+        }
+        
+        // CSVの1行をパース（カンマ区切り、ダブルクォート対応）
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            result.push(current.trim());
+            
+            return result;
+        }
+        
+        // 住所をジオコーディング（座標に変換）
+        async function geocodeAddresses(data) {
+            // 既存のマーカーをクリア
+            markers.forEach(m => m.setMap(null));
+            markers = [];
+            
+            const loading = document.getElementById('loading');
+            const progress = document.getElementById('loadingProgress');
+            loading.classList.add('show');
+            
+            const geocoder = new google.maps.Geocoder();
+            const bounds = new google.maps.LatLngBounds();
+            let successCount = 0;
+            
+            for (let i = 0; i < data.length; i++) {
+                const item = data[i];
+                progress.textContent = `${i + 1} / ${data.length}`;
+                
+                try {
+                    const position = await geocodeAddress(geocoder, item.address);
+                    if (position) {
+                        createMarker(item, position);
+                        bounds.extend(position);
+                        successCount++;
+                    }
+                } catch (error) {
+                    console.warn(`住所変換失敗: ${item.address}`, error);
+                }
+                
+                // API制限対策：少し待つ
+                await sleep(200);
+            }
+            
+            loading.classList.remove('show');
+            
+            // 件数を更新
+            document.getElementById('countBadge').textContent = `${successCount}件`;
+            
+            // すべてのピンが見える範囲に調整
+            if (successCount > 0) {
+                map.fitBounds(bounds);
+            }
+            
+            // ファイル入力をリセット
+            document.getElementById('csvInput').value = '';
+        }
+        
+        // 住所→座標変換
+        function geocodeAddress(geocoder, address) {
+            return new Promise((resolve, reject) => {
+                geocoder.geocode({ address: address }, (results, status) => {
+                    if (status === 'OK' && results[0]) {
+                        resolve(results[0].geometry.location);
+                    } else {
+                        reject(status);
+                    }
+                });
             });
+        }
+        
+        // マーカーを作成
+        function createMarker(item, position) {
+            const marker = new google.maps.Marker({
+                position: position,
+                map: map,
+                title: item.company,
+                label: {
+                    text: item.company,
+                    className: 'marker-label',
+                    fontSize: '11px',
+                    fontWeight: 'bold'
+                },
+                icon: {
+                    url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+                    labelOrigin: new google.maps.Point(15, -10)
+                }
+            });
+            
+            // クリックで詳細表示
+            marker.addListener('click', () => {
+                const content = `
+                    <div style="padding: 8px; min-width: 200px;">
+                        <h3 style="margin: 0 0 8px 0; color: #333; font-size: 16px;">
+                            ${item.company}
+                        </h3>
+                        <p style="margin: 4px 0; font-size: 13px;">
+                            <strong>📍 住所：</strong><br>${item.address}
+                        </p>
+                        <p style="margin: 4px 0; font-size: 13px;">
+                            <strong>👤 担当者：</strong>${item.contact || '未登録'}
+                        </p>
+                        <p style="margin: 4px 0; font-size: 13px;">
+                            <strong>📞 電話：</strong>
+                            <a href="tel:${item.phone}" style="color: #4285f4;">${item.phone || '未登録'}</a>
+                        </p>
+                        ${item.info ? `
+                        <p style="margin: 8px 0 4px 0; padding-top: 8px; border-top: 1px solid #eee; font-size: 13px;">
+                            <strong>📝 会社情報：</strong><br>${item.info}
+                        </p>
+                        ` : ''}
+                    </div>
+                `;
+                
+                infoWindow.setContent(content);
+                infoWindow.open(map, marker);
+            });
+            
+            markers.push(marker);
+        }
+        
+        // 待機関数
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
         }
     </script>
 
     <!-- ★★★ 下の YOUR_API_KEY_HERE をあなたのAPIキーに置き換えてね！ ★★★ -->
     <script async defer
-        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAbzPpvv1voF_qjTfyQdKiCZ0cGL6yeVio&callback=initMap">
+        src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY_HERE&callback=initMap">
     </script>
 </body>
 </html>
