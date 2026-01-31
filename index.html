@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>メンテナンスマップ</title>
+    <!-- PDF出力用ライブラリ -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -18,50 +21,59 @@
         .header {
             background: #4285f4;
             color: white;
-            padding: 12px 16px;
+            padding: 10px 12px;
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
             position: relative;
             z-index: 100;
+            flex-wrap: wrap;
         }
         .header h1 {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 600;
         }
         
-        /* CSVアップロードボタン */
-        .upload-btn {
+        /* ボタン共通 */
+        .btn {
             background: white;
             color: #4285f4;
             border: none;
-            padding: 8px 16px;
+            padding: 8px 12px;
             border-radius: 20px;
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 600;
             cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 4px;
+            white-space: nowrap;
         }
-        .upload-btn:hover {
+        .btn:hover {
             background: #f0f0f0;
+        }
+        .btn-pdf {
+            background: #34a853;
+            color: white;
+        }
+        .btn-pdf:hover {
+            background: #2d8f47;
         }
         
         /* 件数表示 */
         .count-badge {
             background: rgba(255,255,255,0.2);
-            padding: 4px 12px;
+            padding: 4px 10px;
             border-radius: 12px;
-            font-size: 14px;
+            font-size: 12px;
             margin-left: auto;
         }
         
         /* 地図 */
         #map {
             width: 100%;
-            height: calc(100vh - 56px);
+            height: calc(100vh - 52px);
         }
         
         /* ファイル入力を隠す */
@@ -89,7 +101,6 @@
         /* 会社名ラベルのスタイル */
         .marker-label {
             background: white;
-            border: 2px solid #4285f4;
             border-radius: 4px;
             padding: 2px 6px;
             font-size: 11px;
@@ -97,13 +108,107 @@
             white-space: nowrap;
             box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
+        
+        /* 吹き出し内のフォーム */
+        .info-form {
+            padding: 8px;
+            min-width: 260px;
+        }
+        .info-form h3 {
+            margin: 0 0 8px 0;
+            color: #333;
+            font-size: 16px;
+            border-bottom: 2px solid #4285f4;
+            padding-bottom: 6px;
+        }
+        .info-row {
+            margin: 6px 0;
+            font-size: 13px;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #555;
+        }
+        .info-form input, .info-form select, .info-form textarea {
+            width: 100%;
+            padding: 8px;
+            margin-top: 4px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .info-form textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+        .route-select {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .color-preview {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid #333;
+        }
+        .save-btn {
+            width: 100%;
+            background: #4285f4;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .save-btn:hover {
+            background: #3367d6;
+        }
+        
+        /* ルート凡例 */
+        .legend {
+            position: fixed;
+            bottom: 20px;
+            left: 10px;
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            z-index: 100;
+            font-size: 11px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .legend-title {
+            font-weight: bold;
+            margin-bottom: 6px;
+            font-size: 12px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin: 4px 0;
+        }
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 1px solid #333;
+        }
     </style>
 </head>
 <body>
     <div class="header">
         <h1>🗺️ メンテナンスマップ</h1>
-        <button class="upload-btn" onclick="document.getElementById('csvInput').click()">
-            📁 CSV読込
+        <button class="btn" onclick="document.getElementById('csvInput').click()">
+            📁 CSV
+        </button>
+        <button class="btn btn-pdf" onclick="exportPDF()">
+            📄 PDF出力
         </button>
         <div class="count-badge" id="countBadge">0件</div>
     </div>
@@ -111,6 +216,12 @@
     <input type="file" id="csvInput" accept=".csv" onchange="handleCSV(event)">
     
     <div id="map"></div>
+    
+    <!-- ルート凡例 -->
+    <div class="legend" id="legend" style="display: none;">
+        <div class="legend-title">📍 ルート凡例</div>
+        <div id="legendItems"></div>
+    </div>
     
     <div class="loading" id="loading">
         📍 住所を変換中...<br>
@@ -121,9 +232,24 @@
         let map;
         let markers = [];
         let infoWindow;
+        let locationData = []; // 全データを保持
+        
+        // 10色のルート設定
+        const ROUTES = [
+            { id: 0, name: '未設定', color: '#9E9E9E', icon: 'https://maps.google.com/mapfiles/ms/icons/grey-dot.png' },
+            { id: 1, name: 'ルート1', color: '#F44336', icon: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png' },
+            { id: 2, name: 'ルート2', color: '#4CAF50', icon: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png' },
+            { id: 3, name: 'ルート3', color: '#2196F3', icon: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png' },
+            { id: 4, name: 'ルート4', color: '#FFEB3B', icon: 'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png' },
+            { id: 5, name: 'ルート5', color: '#9C27B0', icon: 'https://maps.google.com/mapfiles/ms/icons/purple-dot.png' },
+            { id: 6, name: 'ルート6', color: '#FF9800', icon: 'https://maps.google.com/mapfiles/ms/icons/orange-dot.png' },
+            { id: 7, name: 'ルート7', color: '#E91E63', icon: 'https://maps.google.com/mapfiles/ms/icons/pink-dot.png' },
+            { id: 8, name: 'ルート8', color: '#00BCD4', icon: 'https://maps.google.com/mapfiles/ms/icons/ltblue-dot.png' },
+            { id: 9, name: 'ルート9', color: '#795548', icon: 'https://mt.googleapis.com/vt/icon/name=icons/spotlight/spotlight-poi.png&scale=1' },
+            { id: 10, name: 'ルート10', color: '#607D8B', icon: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png' }
+        ];
         
         function initMap() {
-            // 千代田区を中心に設定
             const chiyoda = { lat: 35.6939, lng: 139.7535 };
             
             map = new google.maps.Map(document.getElementById('map'), {
@@ -131,8 +257,10 @@
                 center: chiyoda,
             });
             
-            // 情報ウィンドウ（吹き出し）を1つだけ作成
             infoWindow = new google.maps.InfoWindow();
+            
+            // LocalStorageから復元
+            loadFromStorage();
         }
         
         // CSVファイルを読み込む
@@ -151,19 +279,25 @@
         // CSVをパースする
         function parseCSV(text) {
             const lines = text.trim().split('\n');
-            const headers = lines[0].split(',');
             
             const data = [];
             for (let i = 1; i < lines.length; i++) {
                 const values = parseCSVLine(lines[i]);
                 if (values.length >= 5) {
                     data.push({
+                        id: 'loc_' + Date.now() + '_' + i,
                         no: values[0] || '',
                         company: values[1] || '',
                         address: values[2] || '',
                         phone: values[3] || '',
                         contact: values[4] || '',
-                        info: values[5] || ''
+                        info: values[5] || '',
+                        // アポ情報（初期値）
+                        routeId: 0,
+                        appointmentDate: '',
+                        appointmentTime: '',
+                        note: '',
+                        position: null
                     });
                 }
             }
@@ -175,7 +309,7 @@
             }
         }
         
-        // CSVの1行をパース（カンマ区切り、ダブルクォート対応）
+        // CSVの1行をパース
         function parseCSVLine(line) {
             const result = [];
             let current = '';
@@ -198,11 +332,11 @@
             return result;
         }
         
-        // 住所をジオコーディング（座標に変換）
+        // 住所をジオコーディング
         async function geocodeAddresses(data) {
-            // 既存のマーカーをクリア
             markers.forEach(m => m.setMap(null));
             markers = [];
+            locationData = [];
             
             const loading = document.getElementById('loading');
             const progress = document.getElementById('loadingProgress');
@@ -219,7 +353,9 @@
                 try {
                     const position = await geocodeAddress(geocoder, item.address);
                     if (position) {
-                        createMarker(item, position);
+                        item.position = { lat: position.lat(), lng: position.lng() };
+                        locationData.push(item);
+                        createMarker(item);
                         bounds.extend(position);
                         successCount++;
                     }
@@ -227,22 +363,21 @@
                     console.warn(`住所変換失敗: ${item.address}`, error);
                 }
                 
-                // API制限対策：少し待つ
                 await sleep(200);
             }
             
             loading.classList.remove('show');
-            
-            // 件数を更新
             document.getElementById('countBadge').textContent = `${successCount}件`;
             
-            // すべてのピンが見える範囲に調整
             if (successCount > 0) {
                 map.fitBounds(bounds);
             }
             
-            // ファイル入力をリセット
             document.getElementById('csvInput').value = '';
+            
+            // 保存
+            saveToStorage();
+            updateLegend();
         }
         
         // 住所→座標変換
@@ -259,9 +394,11 @@
         }
         
         // マーカーを作成
-        function createMarker(item, position) {
+        function createMarker(item) {
+            const route = ROUTES[item.routeId] || ROUTES[0];
+            
             const marker = new google.maps.Marker({
-                position: position,
+                position: item.position,
                 map: map,
                 title: item.company,
                 label: {
@@ -271,41 +408,291 @@
                     fontWeight: 'bold'
                 },
                 icon: {
-                    url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+                    url: route.icon,
                     labelOrigin: new google.maps.Point(15, -10)
                 }
             });
             
-            // クリックで詳細表示
+            marker.itemId = item.id;
+            
             marker.addListener('click', () => {
-                const content = `
-                    <div style="padding: 8px; min-width: 200px;">
-                        <h3 style="margin: 0 0 8px 0; color: #333; font-size: 16px;">
-                            ${item.company}
-                        </h3>
-                        <p style="margin: 4px 0; font-size: 13px;">
-                            <strong>📍 住所：</strong><br>${item.address}
-                        </p>
-                        <p style="margin: 4px 0; font-size: 13px;">
-                            <strong>👤 担当者：</strong>${item.contact || '未登録'}
-                        </p>
-                        <p style="margin: 4px 0; font-size: 13px;">
-                            <strong>📞 電話：</strong>
-                            <a href="tel:${item.phone}" style="color: #4285f4;">${item.phone || '未登録'}</a>
-                        </p>
-                        ${item.info ? `
-                        <p style="margin: 8px 0 4px 0; padding-top: 8px; border-top: 1px solid #eee; font-size: 13px;">
-                            <strong>📝 会社情報：</strong><br>${item.info}
-                        </p>
-                        ` : ''}
-                    </div>
-                `;
-                
-                infoWindow.setContent(content);
-                infoWindow.open(map, marker);
+                showInfoWindow(item, marker);
             });
             
             markers.push(marker);
+        }
+        
+        // 情報ウィンドウを表示
+        function showInfoWindow(item, marker) {
+            const route = ROUTES[item.routeId] || ROUTES[0];
+            
+            // ルート選択オプション
+            let routeOptions = ROUTES.map(r => 
+                `<option value="${r.id}" ${item.routeId === r.id ? 'selected' : ''}>${r.name}</option>`
+            ).join('');
+            
+            const content = `
+                <div class="info-form">
+                    <h3>${item.company}</h3>
+                    
+                    <div class="info-row">
+                        <span class="info-label">📍 住所：</span><br>
+                        ${item.address}
+                    </div>
+                    
+                    <div class="info-row">
+                        <span class="info-label">👤 担当者：</span>
+                        ${item.contact || '未登録'}
+                    </div>
+                    
+                    <div class="info-row">
+                        <span class="info-label">📞 電話：</span>
+                        <a href="tel:${item.phone}" style="color: #4285f4;">${item.phone || '未登録'}</a>
+                    </div>
+                    
+                    ${item.info ? `
+                    <div class="info-row">
+                        <span class="info-label">📝 会社情報：</span><br>
+                        ${item.info}
+                    </div>
+                    ` : ''}
+                    
+                    <hr style="margin: 12px 0; border: none; border-top: 1px solid #eee;">
+                    
+                    <div class="info-row">
+                        <span class="info-label">🎨 ルート：</span>
+                        <div class="route-select">
+                            <select id="route_${item.id}" onchange="updateColorPreview('${item.id}')">
+                                ${routeOptions}
+                            </select>
+                            <div class="color-preview" id="colorPreview_${item.id}" style="background: ${route.color};"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="info-row">
+                        <span class="info-label">📅 アポ日時：</span>
+                        <input type="date" id="date_${item.id}" value="${item.appointmentDate}">
+                        <input type="time" id="time_${item.id}" value="${item.appointmentTime}" style="margin-top: 4px;">
+                    </div>
+                    
+                    <div class="info-row">
+                        <span class="info-label">⚠️ 注意事項：</span>
+                        <textarea id="note_${item.id}" placeholder="駐車場情報など...">${item.note || ''}</textarea>
+                    </div>
+                    
+                    <button class="save-btn" onclick="saveAppointment('${item.id}')">
+                        💾 保存する
+                    </button>
+                </div>
+            `;
+            
+            infoWindow.setContent(content);
+            infoWindow.open(map, marker);
+        }
+        
+        // 色プレビュー更新
+        function updateColorPreview(itemId) {
+            const select = document.getElementById(`route_${itemId}`);
+            const preview = document.getElementById(`colorPreview_${itemId}`);
+            const routeId = parseInt(select.value);
+            const route = ROUTES[routeId];
+            preview.style.background = route.color;
+        }
+        
+        // アポ情報を保存
+        function saveAppointment(itemId) {
+            const item = locationData.find(d => d.id === itemId);
+            if (!item) return;
+            
+            item.routeId = parseInt(document.getElementById(`route_${itemId}`).value);
+            item.appointmentDate = document.getElementById(`date_${itemId}`).value;
+            item.appointmentTime = document.getElementById(`time_${itemId}`).value;
+            item.note = document.getElementById(`note_${itemId}`).value;
+            
+            // マーカーを更新
+            const markerIndex = markers.findIndex(m => m.itemId === itemId);
+            if (markerIndex >= 0) {
+                markers[markerIndex].setMap(null);
+                markers.splice(markerIndex, 1);
+                createMarker(item);
+            }
+            
+            // 保存
+            saveToStorage();
+            updateLegend();
+            
+            infoWindow.close();
+            
+            // 保存完了通知
+            alert('✅ 保存しました！');
+        }
+        
+        // 凡例を更新
+        function updateLegend() {
+            const legend = document.getElementById('legend');
+            const legendItems = document.getElementById('legendItems');
+            
+            // 使用中のルートをカウント
+            const routeCounts = {};
+            locationData.forEach(item => {
+                routeCounts[item.routeId] = (routeCounts[item.routeId] || 0) + 1;
+            });
+            
+            if (Object.keys(routeCounts).length === 0) {
+                legend.style.display = 'none';
+                return;
+            }
+            
+            legend.style.display = 'block';
+            
+            let html = '';
+            ROUTES.forEach(route => {
+                const count = routeCounts[route.id] || 0;
+                if (count > 0) {
+                    html += `
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: ${route.color};"></div>
+                            <span>${route.name}（${count}件）</span>
+                        </div>
+                    `;
+                }
+            });
+            
+            legendItems.innerHTML = html;
+        }
+        
+        // LocalStorageに保存
+        function saveToStorage() {
+            localStorage.setItem('maintenanceMapData', JSON.stringify(locationData));
+        }
+        
+        // LocalStorageから復元
+        function loadFromStorage() {
+            const saved = localStorage.getItem('maintenanceMapData');
+            if (saved) {
+                try {
+                    locationData = JSON.parse(saved);
+                    
+                    const bounds = new google.maps.LatLngBounds();
+                    
+                    locationData.forEach(item => {
+                        if (item.position) {
+                            createMarker(item);
+                            bounds.extend(item.position);
+                        }
+                    });
+                    
+                    if (locationData.length > 0) {
+                        map.fitBounds(bounds);
+                        document.getElementById('countBadge').textContent = `${locationData.length}件`;
+                    }
+                    
+                    updateLegend();
+                } catch (e) {
+                    console.error('データ復元エラー:', e);
+                }
+            }
+        }
+        
+        // PDF出力
+        function exportPDF() {
+            if (locationData.length === 0) {
+                alert('データがありません。CSVを読み込んでください。');
+                return;
+            }
+            
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('l', 'mm', 'a4'); // 横向きA4
+            
+            // 日本語フォント対応のため、シンプルな英字フォントを使用
+            doc.setFont('helvetica');
+            
+            // タイトル
+            doc.setFontSize(18);
+            doc.text('Maintenance Map - Appointment List', 14, 15);
+            
+            // 日付
+            doc.setFontSize(10);
+            const today = new Date().toLocaleDateString('ja-JP');
+            doc.text(`Output: ${today}`, 14, 22);
+            
+            // テーブルデータ作成
+            const tableData = locationData.map(item => {
+                const route = ROUTES[item.routeId] || ROUTES[0];
+                const dateTime = item.appointmentDate ? 
+                    `${item.appointmentDate} ${item.appointmentTime || ''}`.trim() : '';
+                
+                return [
+                    item.no,
+                    item.company,
+                    item.address,
+                    item.phone,
+                    item.contact,
+                    item.info || '',
+                    route.name,
+                    dateTime,
+                    item.note || ''
+                ];
+            });
+            
+            // ルートでソート
+            tableData.sort((a, b) => {
+                const routeA = ROUTES.findIndex(r => r.name === a[6]);
+                const routeB = ROUTES.findIndex(r => r.name === b[6]);
+                return routeA - routeB;
+            });
+            
+            // テーブル描画
+            doc.autoTable({
+                head: [[
+                    'No', 'Company', 'Address', 'Phone', 
+                    'Contact', 'Info', 'Route', 'Appointment', 'Note'
+                ]],
+                body: tableData,
+                startY: 28,
+                styles: {
+                    fontSize: 8,
+                    cellPadding: 2,
+                },
+                headStyles: {
+                    fillColor: [66, 133, 244],
+                    textColor: 255,
+                    fontStyle: 'bold',
+                },
+                columnStyles: {
+                    0: { cellWidth: 12 },
+                    1: { cellWidth: 35 },
+                    2: { cellWidth: 50 },
+                    3: { cellWidth: 25 },
+                    4: { cellWidth: 20 },
+                    5: { cellWidth: 30 },
+                    6: { cellWidth: 18 },
+                    7: { cellWidth: 28 },
+                    8: { cellWidth: 35 },
+                },
+                didParseCell: function(data) {
+                    // ルート列に色をつける
+                    if (data.column.index === 6 && data.section === 'body') {
+                        const routeName = data.cell.raw;
+                        const route = ROUTES.find(r => r.name === routeName);
+                        if (route && route.id !== 0) {
+                            // RGB変換
+                            const hex = route.color.replace('#', '');
+                            const r = parseInt(hex.substr(0, 2), 16);
+                            const g = parseInt(hex.substr(2, 2), 16);
+                            const b = parseInt(hex.substr(4, 2), 16);
+                            data.cell.styles.fillColor = [r, g, b];
+                            // 明るい色は黒文字、暗い色は白文字
+                            const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+                            data.cell.styles.textColor = brightness > 128 ? [0, 0, 0] : [255, 255, 255];
+                        }
+                    }
+                }
+            });
+            
+            // ダウンロード
+            const fileName = `maintenance_map_${today.replace(/\//g, '-')}.pdf`;
+            doc.save(fileName);
         }
         
         // 待機関数
@@ -316,7 +703,7 @@
 
     <!-- ★★★ 下の YOUR_API_KEY_HERE をあなたのAPIキーに置き換えてね！ ★★★ -->
     <script async defer
-        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAbzPpvv1voF_qjTfyQdKiCZ0cGL6yeVio&callback=initMap">
+        src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY_HERE&callback=initMap">
     </script>
 </body>
 </html>
