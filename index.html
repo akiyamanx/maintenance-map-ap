@@ -303,36 +303,110 @@
             }
         }
         
-        // Excelデータをパース
+        // Excelデータをパース（マーフィード形式対応）
         function parseExcelData(rows) {
             const data = [];
             
-            // 1行目はヘッダーなのでスキップ
-            for (let i = 1; i < rows.length; i++) {
-                const values = rows[i];
-                if (values && values.length >= 5) {
-                    data.push({
-                        id: 'loc_' + Date.now() + '_' + i,
-                        no: String(values[0] || ''),
-                        company: String(values[1] || ''),
-                        address: String(values[2] || ''),
-                        phone: String(values[3] || ''),
-                        contact: String(values[4] || ''),
-                        info: String(values[5] || ''),
-                        // アポ情報（初期値）
-                        routeId: 0,
-                        appointmentDate: '',
-                        appointmentTime: '',
-                        note: '',
-                        position: null
+            // ヘッダー行を探す（「設置先会社名」または「会社名」を含む行）
+            let headerRowIndex = -1;
+            let columnMap = {};
+            
+            for (let i = 0; i < Math.min(rows.length, 10); i++) {
+                const row = rows[i];
+                if (!row) continue;
+                
+                const rowStr = row.map(cell => String(cell || '')).join(',');
+                
+                // ヘッダー行の検出
+                if (rowStr.includes('設置先会社名') || rowStr.includes('会社名')) {
+                    headerRowIndex = i;
+                    
+                    // 列のマッピングを作成
+                    row.forEach((cell, index) => {
+                        const cellStr = String(cell || '').trim();
+                        
+                        if (cellStr.includes('管理NO') || cellStr.includes('管理No') || cellStr === 'NO') {
+                            columnMap.no = index;
+                        }
+                        if (cellStr.includes('設置先会社名') || cellStr === '会社名') {
+                            columnMap.company = index;
+                        }
+                        if (cellStr === '都道府県') {
+                            columnMap.prefecture = index;
+                        }
+                        if (cellStr === '住所') {
+                            columnMap.address = index;
+                        }
+                        if (cellStr.includes('TEL') || cellStr.includes('電話')) {
+                            columnMap.phone = index;
+                        }
+                        if (cellStr.includes('担当者')) {
+                            columnMap.contact = index;
+                        }
+                        if (cellStr.includes('設置先情報') || cellStr.includes('会社情報') || cellStr.includes('備考')) {
+                            columnMap.info = index;
+                        }
                     });
+                    break;
                 }
             }
             
+            // ヘッダーが見つからない場合は従来の方式（1行目がヘッダー、固定列）
+            if (headerRowIndex === -1) {
+                headerRowIndex = 0;
+                columnMap = { no: 0, company: 1, address: 2, phone: 3, contact: 4, info: 5 };
+            }
+            
+            console.log('ヘッダー行:', headerRowIndex);
+            console.log('列マッピング:', columnMap);
+            
+            // データ行をパース
+            for (let i = headerRowIndex + 1; i < rows.length; i++) {
+                const values = rows[i];
+                if (!values) continue;
+                
+                // 会社名があるかチェック
+                const company = columnMap.company !== undefined ? String(values[columnMap.company] || '') : '';
+                if (!company || company === 'undefined' || company === 'NaN') continue;
+                
+                // 住所を組み立て（都道府県 + 住所）
+                let address = '';
+                if (columnMap.prefecture !== undefined && values[columnMap.prefecture]) {
+                    address += String(values[columnMap.prefecture] || '');
+                }
+                if (columnMap.address !== undefined && values[columnMap.address]) {
+                    address += String(values[columnMap.address] || '');
+                }
+                // 住所列しかない場合
+                if (!address && columnMap.address !== undefined) {
+                    address = String(values[columnMap.address] || '');
+                }
+                
+                if (!address) continue; // 住所がなければスキップ
+                
+                data.push({
+                    id: 'loc_' + Date.now() + '_' + i,
+                    no: columnMap.no !== undefined ? String(values[columnMap.no] || '') : '',
+                    company: company,
+                    address: address,
+                    phone: columnMap.phone !== undefined ? String(values[columnMap.phone] || '') : '',
+                    contact: columnMap.contact !== undefined ? String(values[columnMap.contact] || '') : '',
+                    info: columnMap.info !== undefined ? String(values[columnMap.info] || '') : '',
+                    // アポ情報（初期値）
+                    routeId: 0,
+                    appointmentDate: '',
+                    appointmentTime: '',
+                    note: '',
+                    position: null
+                });
+            }
+            
             if (data.length > 0) {
+                console.log('読み込んだデータ数:', data.length);
+                console.log('最初のデータ:', data[0]);
                 geocodeAddresses(data);
             } else {
-                alert('データがありません');
+                alert('データがありません。ファイル形式を確認してください。');
             }
         }
         
@@ -763,7 +837,7 @@
 
     <!-- ★★★ 下の YOUR_API_KEY_HERE をあなたのAPIキーに置き換えてね！ ★★★ -->
     <script async defer
-        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAbzPpvv1voF_qjTfyQdKiCZ0cGL6yeVio&callback=initMap">
+        src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY_HERE&callback=initMap">
     </script>
 </body>
 </html>
