@@ -307,7 +307,7 @@
         function parseExcelData(rows) {
             const data = [];
             
-            // ヘッダー行を探す（「設置先会社名」または「会社名」を含む行）
+            // ヘッダー行を探す（「管理NO」または「U管理NO」を含む行）
             let headerRowIndex = -1;
             let columnMap = {};
             
@@ -317,8 +317,8 @@
                 
                 const rowStr = row.map(cell => String(cell || '')).join(',');
                 
-                // ヘッダー行の検出
-                if (rowStr.includes('設置先会社名') || rowStr.includes('会社名')) {
+                // ヘッダー行の検出（管理NOがある行を探す）
+                if (rowStr.includes('管理NO') || rowStr.includes('管理No')) {
                     headerRowIndex = i;
                     
                     // 列のマッピングを作成
@@ -347,6 +347,18 @@
                             columnMap.info = index;
                         }
                     });
+                    
+                    // 会社名列が見つからない場合、データ行から推測
+                    // 管理NOの2つ後（交換フィルターの後）に会社名があることが多い
+                    if (columnMap.company === undefined && columnMap.no !== undefined) {
+                        columnMap.company = columnMap.no + 2; // 管理NOの2列後
+                    }
+                    
+                    // 住所列が見つからない場合、都道府県の次の列を使う
+                    if (columnMap.address === undefined && columnMap.prefecture !== undefined) {
+                        columnMap.address = columnMap.prefecture + 1;
+                    }
+                    
                     break;
                 }
             }
@@ -365,9 +377,22 @@
                 const values = rows[i];
                 if (!values) continue;
                 
-                // 会社名があるかチェック
-                const company = columnMap.company !== undefined ? String(values[columnMap.company] || '') : '';
-                if (!company || company === 'undefined' || company === 'NaN') continue;
+                // 会社名を取得
+                let company = '';
+                if (columnMap.company !== undefined) {
+                    company = String(values[columnMap.company] || '');
+                }
+                
+                // 会社名がない場合、データ行の可能性がある列を探す
+                // （管理NOの2列後にデータがあるパターン）
+                if ((!company || company === 'undefined' || company === 'NaN' || company === 'null') && columnMap.no !== undefined) {
+                    const possibleCompanyCol = columnMap.no + 2;
+                    if (values[possibleCompanyCol]) {
+                        company = String(values[possibleCompanyCol] || '');
+                    }
+                }
+                
+                if (!company || company === 'undefined' || company === 'NaN' || company === 'null' || company === 'NaN') continue;
                 
                 // 住所を組み立て（都道府県 + 住所）
                 let address = '';
@@ -377,21 +402,35 @@
                 if (columnMap.address !== undefined && values[columnMap.address]) {
                     address += String(values[columnMap.address] || '');
                 }
-                // 住所列しかない場合
-                if (!address && columnMap.address !== undefined) {
-                    address = String(values[columnMap.address] || '');
-                }
                 
                 if (!address) continue; // 住所がなければスキップ
+                
+                // 電話番号を取得
+                let phone = '';
+                if (columnMap.phone !== undefined) {
+                    phone = String(values[columnMap.phone] || '');
+                }
+                
+                // 担当者を取得
+                let contact = '';
+                if (columnMap.contact !== undefined) {
+                    contact = String(values[columnMap.contact] || '');
+                }
+                
+                // 設置先情報を取得
+                let info = '';
+                if (columnMap.info !== undefined) {
+                    info = String(values[columnMap.info] || '');
+                }
                 
                 data.push({
                     id: 'loc_' + Date.now() + '_' + i,
                     no: columnMap.no !== undefined ? String(values[columnMap.no] || '') : '',
                     company: company,
                     address: address,
-                    phone: columnMap.phone !== undefined ? String(values[columnMap.phone] || '') : '',
-                    contact: columnMap.contact !== undefined ? String(values[columnMap.contact] || '') : '',
-                    info: columnMap.info !== undefined ? String(values[columnMap.info] || '') : '',
+                    phone: phone,
+                    contact: contact,
+                    info: (info && info !== 'NaN' && info !== 'undefined') ? info : '',
                     // アポ情報（初期値）
                     routeId: 0,
                     appointmentDate: '',
@@ -410,37 +449,13 @@
             }
         }
         
-        // CSVをパースする
+        // CSVをパースする（マーフィード形式対応）
         function parseCSV(text) {
             const lines = text.trim().split('\n');
+            const rows = lines.map(line => parseCSVLine(line));
             
-            const data = [];
-            for (let i = 1; i < lines.length; i++) {
-                const values = parseCSVLine(lines[i]);
-                if (values.length >= 5) {
-                    data.push({
-                        id: 'loc_' + Date.now() + '_' + i,
-                        no: values[0] || '',
-                        company: values[1] || '',
-                        address: values[2] || '',
-                        phone: values[3] || '',
-                        contact: values[4] || '',
-                        info: values[5] || '',
-                        // アポ情報（初期値）
-                        routeId: 0,
-                        appointmentDate: '',
-                        appointmentTime: '',
-                        note: '',
-                        position: null
-                    });
-                }
-            }
-            
-            if (data.length > 0) {
-                geocodeAddresses(data);
-            } else {
-                alert('CSVにデータがありません');
-            }
+            // Excelと同じ処理を使う
+            parseExcelData(rows);
         }
         
         // CSVの1行をパース
@@ -837,7 +852,7 @@
 
     <!-- ★★★ 下の YOUR_API_KEY_HERE をあなたのAPIキーに置き換えてね！ ★★★ -->
     <script async defer
-        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAbzPpvv1voF_qjTfyQdKiCZ0cGL6yeVio&callback=initMap">
+        src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY_HERE&callback=initMap">
     </script>
 </body>
 </html>
