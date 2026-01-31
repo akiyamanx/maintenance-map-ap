@@ -7,6 +7,8 @@
     <!-- PDF出力用ライブラリ -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <!-- Excel読み込み用ライブラリ -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -205,7 +207,7 @@
     <div class="header">
         <h1>🗺️ メンテナンスマップ</h1>
         <button class="btn" onclick="document.getElementById('csvInput').click()">
-            📁 CSV
+            📁 読込
         </button>
         <button class="btn btn-pdf" onclick="exportPDF()">
             📄 PDF出力
@@ -213,7 +215,7 @@
         <div class="count-badge" id="countBadge">0件</div>
     </div>
     
-    <input type="file" id="csvInput" accept=".csv" onchange="handleCSV(event)">
+    <input type="file" id="csvInput" accept=".csv,.xlsx,.xls" onchange="handleFile(event)">
     
     <div id="map"></div>
     
@@ -263,17 +265,75 @@
             loadFromStorage();
         }
         
-        // CSVファイルを読み込む
-        function handleCSV(event) {
+        // ファイルを読み込む（Excel/CSV両対応）
+        function handleFile(event) {
             const file = event.target.files[0];
             if (!file) return;
             
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const text = e.target.result;
-                parseCSV(text);
-            };
-            reader.readAsText(file, 'UTF-8');
+            const fileName = file.name.toLowerCase();
+            
+            if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+                // Excelファイル
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    
+                    // 最初のシートを取得
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    
+                    // JSON形式に変換
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+                    
+                    if (jsonData.length > 1) {
+                        parseExcelData(jsonData);
+                    } else {
+                        alert('Excelファイルにデータがありません');
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            } else {
+                // CSVファイル
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const text = e.target.result;
+                    parseCSV(text);
+                };
+                reader.readAsText(file, 'UTF-8');
+            }
+        }
+        
+        // Excelデータをパース
+        function parseExcelData(rows) {
+            const data = [];
+            
+            // 1行目はヘッダーなのでスキップ
+            for (let i = 1; i < rows.length; i++) {
+                const values = rows[i];
+                if (values && values.length >= 5) {
+                    data.push({
+                        id: 'loc_' + Date.now() + '_' + i,
+                        no: String(values[0] || ''),
+                        company: String(values[1] || ''),
+                        address: String(values[2] || ''),
+                        phone: String(values[3] || ''),
+                        contact: String(values[4] || ''),
+                        info: String(values[5] || ''),
+                        // アポ情報（初期値）
+                        routeId: 0,
+                        appointmentDate: '',
+                        appointmentTime: '',
+                        note: '',
+                        position: null
+                    });
+                }
+            }
+            
+            if (data.length > 0) {
+                geocodeAddresses(data);
+            } else {
+                alert('データがありません');
+            }
         }
         
         // CSVをパースする
@@ -703,7 +763,7 @@
 
     <!-- ★★★ 下の YOUR_API_KEY_HERE をあなたのAPIキーに置き換えてね！ ★★★ -->
     <script async defer
-        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAbzPpvv1voF_qjTfyQdKiCZ0cGL6yeVio&callback=initMap">
+        src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY_HERE&callback=initMap">
     </script>
 </body>
 </html>
