@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>メンテナンスマップ - 使い方ガイド</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            line-height: 1.8;
+        }
+        
+        /* ヘッダー */
+        .header {
+            background: linear-gradient(135deg, #4285f4, #00bcd4);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .header p {
+            margin-top: 8px;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .back-btn {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .back-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        /* メインコンテンツ */
+        .content {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* 目次 */
+        .toc {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        
+        .toc h2 {
+            font-size: 16px;
+            color: #4285f4;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .toc-list {
+            list-style: none;
+        }
+        
+        .toc-list li {
+            margin: 10px 0;
+        }
+        
+        .toc-list a {
+            color: #555;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        
+        .toc-list a:hover {
+            background: #f0f4ff;
+            color: #4285f4;
+        }
+        
+        .toc-num {
+            background: #4285f4;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        
+        /* セクション */
+        .section {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        
+        .section h2 {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 3px solid #4285f4;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .section h3 {
+            font-size: 16px;
+            color: #4285f4;
+            margin: 20px 0 12px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .section p {
+            margin: 12px 0;
+            color: #555;
+        }
+        
+        /* ステップ */
+        .steps {
+            counter-reset: step;
+        }
+        
+        .step {
+            display: flex;
+            gap: 15px;
+            margin: 20px 0;
+            padding: 16px;
+            background: #f8fafc;
+            border-radius: 10px;
+            border-left: 4px solid #4285f4;
+        }
+        
+        .step-num {
+            background: #4285f4;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        
+        .step-content {
+            flex: 1;
+        }
+        
+        .step-title {
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 6px;
+        }
+        
+        .step-desc {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        /* ボタン説明 */
+        .btn-guide {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 16px;
+            background: #f8fafc;
+            border-radius: 10px;
+            margin: 12px 0;
+        }
+        
+        .btn-sample {
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            flex-shrink: 0;
+            border: none;
+        }
+        
+        .btn-blue { background: white; color: #4285f4; border: 2px solid #e0e0e0; }
+        .btn-green { background: #34a853; color: white; }
+        .btn-orange { background: #ff9800; color: white; }
+        .btn-red { background: #f44336; color: white; }
+        .btn-purple { background: #9c27b0; color: white; }
+        
+        .btn-guide-text {
+            flex: 1;
+        }
+        
+        .btn-guide-title {
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 4px;
+        }
+        
+        .btn-guide-desc {
+            color: #666;
+            font-size: 13px;
+        }
+        
+        /* ルートカラー一覧 */
+        .route-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .route-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: #f8fafc;
+            border-radius: 8px;
+        }
+        
+        .route-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid rgba(0,0,0,0.1);
+        }
+        
+        .route-name {
+            font-size: 13px;
+            font-weight: 500;
+        }
+        
+        /* 注意事項 */
+        .note {
+            background: #fff8e1;
+            border-left: 4px solid #ffc107;
+            padding: 16px;
+            border-radius: 0 10px 10px 0;
+            margin: 20px 0;
+        }
+        
+        .note-title {
+            font-weight: 700;
+            color: #f57f17;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .note p {
+            color: #795548;
+            margin: 0;
+            font-size: 14px;
+        }
+        
+        /* ヒント */
+        .tip {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            padding: 16px;
+            border-radius: 0 10px 10px 0;
+            margin: 20px 0;
+        }
+        
+        .tip-title {
+            font-weight: 700;
+            color: #2e7d32;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .tip p {
+            color: #33691e;
+            margin: 0;
+            font-size: 14px;
+        }
+        
+        /* ファイル形式 */
+        .file-format {
+            background: #f5f5f5;
+            padding: 16px;
+            border-radius: 10px;
+            margin: 15px 0;
+            overflow-x: auto;
+        }
+        
+        .file-format table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        
+        .file-format th {
+            background: #4285f4;
+            color: white;
+            padding: 10px 8px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        .file-format td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .file-format tr:nth-child(even) {
+            background: #fafafa;
+        }
+        
+        /* FAQ */
+        .faq-item {
+            margin: 15px 0;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .faq-q {
+            background: #f8fafc;
+            padding: 16px;
+            font-weight: 700;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .faq-q-icon {
+            background: #4285f4;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+        }
+        
+        .faq-a {
+            padding: 16px;
+            color: #555;
+            font-size: 14px;
+        }
+        
+        /* フッター */
+        .footer {
+            text-align: center;
+            padding: 30px 20px;
+            color: #999;
+            font-size: 12px;
+        }
+        
+        /* レスポンシブ */
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 20px;
+            }
+            .back-btn {
+                position: static;
+                transform: none;
+                margin-bottom: 15px;
+            }
+            .section {
+                padding: 18px;
+            }
+            .step {
+                flex-direction: column;
+                gap: 10px;
+            }
+            .btn-guide {
+                flex-direction: column;
+                text-align: center;
+            }
+            .route-list {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <a href="index.html" class="back-btn">← 戻る</a>
+        <h1>📖 使い方ガイド</h1>
+        <p>メンテナンスマップの操作方法をわかりやすく解説します</p>
+    </header>
+    
+    <main class="content">
+        <!-- 目次 -->
+        <nav class="toc">
+            <h2>📑 目次</h2>
+            <ul class="toc-list">
+                <li><a href="#overview"><span class="toc-num">1</span> アプリの概要</a></li>
+                <li><a href="#buttons"><span class="toc-num">2</span> 画面の説明</a></li>
+                <li><a href="#load"><span class="toc-num">3</span> ファイルを読み込む</a></li>
+                <li><a href="#add"><span class="toc-num">4</span> 手動で追加する</a></li>
+                <li><a href="#edit"><span class="toc-num">5</span> 情報を編集する</a></li>
+                <li><a href="#routes"><span class="toc-num">6</span> ルートを設定する</a></li>
+                <li><a href="#pdf"><span class="toc-num">7</span> PDFを出力する</a></li>
+                <li><a href="#reset"><span class="toc-num">8</span> データをリセットする</a></li>
+                <li><a href="#faq"><span class="toc-num">9</span> よくある質問</a></li>
+            </ul>
+        </nav>
+        
+        <!-- 1. アプリの概要 -->
+        <section class="section" id="overview">
+            <h2>🗺️ 1. アプリの概要</h2>
+            <p>メンテナンスマップは、ウォーターサーバーのメンテナンス先を地図上で管理するアプリです。</p>
+            
+            <h3>✨ 主な機能</h3>
+            <ul style="margin-left: 20px; color: #555;">
+                <li><strong>Excel/CSVファイル読込</strong> - メンテナンスリストを一括インポート</li>
+                <li><strong>自動マッピング</strong> - 住所から自動で地図にピン表示</li>
+                <li><strong>同一建物の自動グループ化</strong> - 同じ住所の複数台をまとめて表示</li>
+                <li><strong>10色のルート管理</strong> - 訪問ルートを色分けして整理</li>
+                <li><strong>アポイント管理</strong> - 日時・注意事項を記録</li>
+                <li><strong>PDF出力</strong> - アポイントリストを印刷用PDFで出力</li>
+                <li><strong>データ自動保存</strong> - 編集内容は自動的に保存されます</li>
+            </ul>
+        </section>
+        
+        <!-- 2. 画面の説明 -->
+        <section class="section" id="buttons">
+            <h2>🖥️ 2. 画面の説明</h2>
+            <p>ヘッダーにある各ボタンの機能を説明します。</p>
+            
+            <div class="btn-guide">
+                <button class="btn-sample btn-blue">📁 読込</button>
+                <div class="btn-guide-text">
+                    <div class="btn-guide-title">ファイル読込</div>
+                    <div class="btn-guide-desc">Excel (.xlsx/.xls) または CSV ファイルを読み込みます</div>
+                </div>
+            </div>
+            
+            <div class="btn-guide">
+                <button class="btn-sample btn-orange">➕ 追加</button>
+                <div class="btn-guide-text">
+                    <div class="btn-guide-title">手動追加</div>
+                    <div class="btn-guide-desc">メンテナンス先を1件ずつ手動で追加します</div>
+                </div>
+            </div>
+            
+            <div class="btn-guide">
+                <button class="btn-sample btn-green">📄 PDF</button>
+                <div class="btn-guide-text">
+                    <div class="btn-guide-title">PDF出力</div>
+                    <div class="btn-guide-desc">現在のデータをPDFファイルでダウンロードします</div>
+                </div>
+            </div>
+            
+            <div class="btn-guide">
+                <button class="btn-sample btn-red">🗑️ リセット</button>
+                <div class="btn-guide-text">
+                    <div class="btn-guide-title">全データ削除</div>
+                    <div class="btn-guide-desc">地図上のすべてのデータを削除します</div>
+                </div>
+            </div>
+            
+            <div class="btn-guide">
+                <button class="btn-sample btn-purple">❓ ヘルプ</button>
+                <div class="btn-guide-text">
+                    <div class="btn-guide-title">ヘルプ</div>
+                    <div class="btn-guide-desc">この使い方ガイドを表示します（このページ）</div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- 3. ファイルを読み込む -->
+        <section class="section" id="load">
+            <h2>📁 3. ファイルを読み込む</h2>
+            <p>ExcelやCSVファイルからメンテナンスリストを読み込みます。</p>
+            
+            <div class="steps">
+                <div class="step">
+                    <div class="step-num">1</div>
+                    <div class="step-content">
+                        <div class="step-title">「読込」ボタンをタップ</div>
+                        <div class="step-desc">画面上部の青い「📁 読込」ボタンをタップします</div>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">2</div>
+                    <div class="step-content">
+                        <div class="step-title">ファイルを選択</div>
+                        <div class="step-desc">スマホのファイル選択画面から、読み込みたいExcel (.xlsx/.xls) または CSV ファイルを選択します</div>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">3</div>
+                    <div class="step-content">
+                        <div class="step-title">住所変換を待つ</div>
+                        <div class="step-desc">「住所を変換中...」と表示されます。件数が多いと時間がかかります（1件あたり約0.2秒）</div>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">4</div>
+                    <div class="step-content">
+                        <div class="step-title">完了！</div>
+                        <div class="step-desc">地図上にマーカーが表示されます。同じ建物の複数台は自動でグループ化されます</div>
+                    </div>
+                </div>
+            </div>
+            
+            <h3>📋 対応ファイル形式</h3>
+            <p>マーフィード形式のExcel/CSVファイルに対応しています。以下の列が自動認識されます：</p>
+            
+            <div class="file-format">
+                <table>
+                    <tr>
+                        <th>列名</th>
+                        <th>内容</th>
+                        <th>必須</th>
+                    </tr>
+                    <tr>
+                        <td>U管理NO / 管理NO</td>
+                        <td>管理番号</td>
+                        <td>-</td>
+                    </tr>
+                    <tr>
+                        <td>（会社名列）</td>
+                        <td>設置先会社名</td>
+                        <td>✅</td>
+                    </tr>
+                    <tr>
+                        <td>都道府県</td>
+                        <td>都道府県</td>
+                        <td>✅</td>
+                    </tr>
+                    <tr>
+                        <td>住所</td>
+                        <td>市区町村以降の住所</td>
+                        <td>✅</td>
+                    </tr>
+                    <tr>
+                        <td>設置先TEL</td>
+                        <td>電話番号</td>
+                        <td>-</td>
+                    </tr>
+                    <tr>
+                        <td>受付担当者</td>
+                        <td>担当者名</td>
+                        <td>-</td>
+                    </tr>
+                    <tr>
+                        <td>設置先情報</td>
+                        <td>備考情報</td>
+                        <td>-</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <div class="tip">
+                <div class="tip-title">💡 ポイント</div>
+                <p>同じ建物に複数台ある場合、住所を正規化して自動的にグループ化されます。「（3台）」のように台数が表示されます。</p>
+            </div>
+        </section>
+        
+        <!-- 4. 手動で追加する -->
+        <section class="section" id="add">
+            <h2>➕ 4. 手動で追加する</h2>
+            <p>急な追加案件など、1件ずつ手動でメンテナンス先を追加できます。</p>
+            
+            <div class="steps">
+                <div class="step">
+                    <div class="step-num">1</div>
+                    <div class="step-content">
+                        <div class="step-title">「追加」ボタンをタップ</div>
+                        <div class="step-desc">画面上部のオレンジ色の「➕ 追加」ボタンをタップします</div>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">2</div>
+                    <div class="step-content">
+                        <div class="step-title">情報を入力</div>
+                        <div class="step-desc">会社名（必須）、住所（必須）、電話番号、担当者、ルート、備考を入力します</div>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">3</div>
+                    <div class="step-content">
+                        <div class="step-title">「追加する」をタップ</div>
+                        <div class="step-desc">住所が検索され、地図上にマーカーが追加されます</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="note">
+                <div class="note-title">⚠️ 注意</div>
+                <p>住所は正確に入力してください。郵便番号や建物名は省略しても大丈夫ですが、都道府県から番地まで入力すると精度が上がります。</p>
+            </div>
+        </section>
+        
+        <!-- 5. 情報を編集する -->
+        <section class="section" id="edit">
+            <h2>✏️ 5. 情報を編集する</h2>
+            <p>地図上のマーカーをタップすると、詳細情報の確認・編集ができます。</p>
+            
+            <div class="steps">
+                <div class="step">
+                    <div class="step-num">1</div>
+                    <div class="step-content">
+                        <div class="step-title">マーカーをタップ</div>
+                        <div class="step-desc">地図上の会社名ラベルまたはピンをタップします</div>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">2</div>
+                    <div class="step-content">
+                        <div class="step-title">情報を確認・編集</div>
+                        <div class="step-desc">吹き出しに詳細情報が表示されます。ルート、アポ日時、注意事項を編集できます</div>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">3</div>
+                    <div class="step-content">
+                        <div class="step-title">「保存する」をタップ</div>
+                        <div class="step-desc">変更内容が保存され、マーカーの色も更新されます</div>
+                    </div>
+                </div>
+            </div>
+            
+            <h3>📞 電話をかける</h3>
+            <p>吹き出し内の電話番号をタップすると、直接電話をかけられます。</p>
+            
+            <h3>🗑️ 個別に削除する</h3>
+            <p>吹き出し内の「この場所を削除」ボタンで、その1件だけを削除できます。</p>
+        </section>
+        
+        <!-- 6. ルートを設定する -->
+        <section class="section" id="routes">
+            <h2>🎨 6. ルートを設定する</h2>
+            <p>訪問ルートを色分けして、効率的なスケジュール管理ができます。</p>
+            
+            <h3>🎨 ルートカラー一覧</h3>
+            <div class="route-list">
+                <div class="route-item">
+                    <div class="route-color" style="background: #00BCD4;"></div>
+                    <span class="route-name">未設定</span>
+                </div>
+                <div class="route-item">
+                    <div class="route-color" style="background: #F44336;"></div>
+                    <span class="route-name">ルート1</span>
+                </div>
+                <div class="route-item">
+                    <div class="route-color" style="background: #4CAF50;"></div>
+                    <span class="route-name">ルート2</span>
+                </div>
+                <div class="route-item">
+                    <div class="route-color" style="background: #2196F3;"></div>
+                    <span class="route-name">ルート3</span>
+                </div>
+                <div class="route-item">
+                    <div class="route-color" style="background: #FFEB3B;"></div>
+                    <span class="route-name">ルート4</span>
+                </div>
+                <div class="route-item">
+                    <div class="route-color" style="background: #9C27B0;"></div>
+                    <span class="route-name">ルート5</span>
+                </div>
+                <div class="route-item">
+                    <div class="route-color" style="background: #FF9800;"></div>
+                    <span class="route-name">ルート6</span>
+                </div>
+                <div class="route-item">
+                    <div class="route-color" style="background: #E91E63;"></div>
+                    <span class="route-name">ルート7</span>
+                </div>
+                <div class="route-item">
+                    <div class="route-color" style="background: #9E9E9E;"></div>
+                    <span class="route-name">ルート8</span>
+                </div>
+                <div class="route-item">
+                    <div class="route-color" style="background: #795548;"></div>
+                    <span class="route-name">ルート9</span>
+                </div>
+                <div class="route-item">
+                    <div class="route-color" style="background: #607D8B;"></div>
+                    <span class="route-name">ルート10</span>
+                </div>
+            </div>
+            
+            <h3>📍 ルート凡例</h3>
+            <p>画面左下に「ルート凡例」が表示されます。どのルートに何件あるか一目でわかります。</p>
+            
+            <div class="tip">
+                <div class="tip-title">💡 活用例</div>
+                <p>月曜日=ルート1（赤）、火曜日=ルート2（緑）のように、曜日ごとに色分けすると便利です！</p>
+            </div>
+        </section>
+        
+        <!-- 7. PDFを出力する -->
+        <section class="section" id="pdf">
+            <h2>📄 7. PDFを出力する</h2>
+            <p>アポイントリストをPDFで出力できます。印刷して持ち歩いたり、共有したりできます。</p>
+            
+            <div class="steps">
+                <div class="step">
+                    <div class="step-num">1</div>
+                    <div class="step-content">
+                        <div class="step-title">「PDF」ボタンをタップ</div>
+                        <div class="step-desc">緑色の「📄 PDF」ボタンをタップします</div>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">2</div>
+                    <div class="step-content">
+                        <div class="step-title">自動ダウンロード</div>
+                        <div class="step-desc">PDFファイルが自動的にダウンロードされます（ファイル名: maintenance_map_日付.pdf）</div>
+                    </div>
+                </div>
+            </div>
+            
+            <h3>📋 PDF内容</h3>
+            <p>PDFには以下の情報がルート順で一覧表示されます：</p>
+            <ul style="margin-left: 20px; color: #555;">
+                <li>管理番号、会社名、台数</li>
+                <li>住所、設置階</li>
+                <li>電話番号、担当者</li>
+                <li>ルート（色付き）、アポ日時</li>
+                <li>注意事項</li>
+            </ul>
+        </section>
+        
+        <!-- 8. データをリセットする -->
+        <section class="section" id="reset">
+            <h2>🗑️ 8. データをリセットする</h2>
+            <p>新しい月のメンテナンスを始める時など、すべてのデータを削除できます。</p>
+            
+            <div class="steps">
+                <div class="step">
+                    <div class="step-num">1</div>
+                    <div class="step-content">
+                        <div class="step-title">「リセット」ボタンをタップ</div>
+                        <div class="step-desc">赤い「🗑️ リセット」ボタンをタップします</div>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">2</div>
+                    <div class="step-content">
+                        <div class="step-title">確認画面</div>
+                        <div class="step-desc">削除される件数が表示されます。本当に削除してよいか確認してください</div>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">3</div>
+                    <div class="step-content">
+                        <div class="step-title">「削除する」をタップ</div>
+                        <div class="step-desc">すべてのデータが削除され、地図がクリアされます</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="note">
+                <div class="note-title">⚠️ 注意</div>
+                <p>削除したデータは元に戻せません。必要なデータは先にPDF出力しておくことをおすすめします。</p>
+            </div>
+        </section>
+        
+        <!-- 9. よくある質問 -->
+        <section class="section" id="faq">
+            <h2>❓ 9. よくある質問</h2>
+            
+            <div class="faq-item">
+                <div class="faq-q">
+                    <span class="faq-q-icon">Q</span>
+                    住所が見つからない場合は？
+                </div>
+                <div class="faq-a">
+                    住所の形式を確認してください。「東京都港区虎ノ門1-1-1」のように、都道府県から番地まで入力すると精度が上がります。建物名は省略しても大丈夫です。
+                </div>
+            </div>
+            
+            <div class="faq-item">
+                <div class="faq-q">
+                    <span class="faq-q-icon">Q</span>
+                    データはどこに保存される？
+                </div>
+                <div class="faq-a">
+                    ブラウザのLocalStorageに自動保存されます。同じブラウザで開けばデータは残っていますが、ブラウザのデータを消去すると消えてしまいます。大切なデータはPDF出力しておきましょう。
+                </div>
+            </div>
+            
+            <div class="faq-item">
+                <div class="faq-q">
+                    <span class="faq-q-icon">Q</span>
+                    スマホとPCでデータを共有できる？
+                </div>
+                <div class="faq-a">
+                    現在のバージョンではデータの同期機能はありません。それぞれのデバイスで別々のデータになります。同じデータを使いたい場合は、同じExcel/CSVファイルを読み込んでください。
+                </div>
+            </div>
+            
+            <div class="faq-item">
+                <div class="faq-q">
+                    <span class="faq-q-icon">Q</span>
+                    PDFの日本語が文字化けする？
+                </div>
+                <div class="faq-a">
+                    技術的な制限により、PDFの見出しは英語表記になっています。データ内容は正常に出力されますので、印刷してご活用ください。
+                </div>
+            </div>
+            
+            <div class="faq-item">
+                <div class="faq-q">
+                    <span class="faq-q-icon">Q</span>
+                    ファイルを追加で読み込むと上書きされる？
+                </div>
+                <div class="faq-a">
+                    はい、新しいファイルを読み込むと既存のデータは上書きされます。追加したい場合は「➕ 追加」ボタンで1件ずつ追加してください。
+                </div>
+            </div>
+        </section>
+    </main>
+    
+    <footer class="footer">
+        <p>💧 メンテナンスマップ v1.0.0</p>
+        <p>© 2026 Marfeed Water Server Maintenance</p>
+    </footer>
+</body>
+</html>
