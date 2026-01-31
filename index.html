@@ -303,6 +303,100 @@
             }
         }
         
+        // 住所を正規化（階数・部屋番号を除去）
+        function normalizeAddress(address) {
+            if (!address) return '';
+            
+            // 階数、部屋番号などを除去するパターン
+            let normalized = address
+                .replace(/\s+/g, '') // スペース除去
+                .replace(/[０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0)) // 全角→半角
+                .replace(/[\uFF21-\uFF3A\uFF41-\uFF5A]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0)) // 全角英字→半角
+                .replace(/(\d+)階.*$/i, '') // 「15階」以降を除去
+                .replace(/(\d+)F.*$/i, '') // 「15F」以降を除去
+                .replace(/(\d+)Ｆ.*$/i, '') // 「15Ｆ」以降を除去
+                .replace(/\d+号室.*$/i, '') // 「101号室」以降を除去
+                .replace(/[A-Za-z]棟.*$/i, '') // 「A棟」以降を除去
+                .trim();
+            
+            return normalized;
+        }
+        
+        // 階数情報を抽出
+        function extractFloorInfo(address) {
+            if (!address) return '';
+            
+            // 階数を抽出
+            const floorMatch = address.match(/(\d+)[階FＦ]/i);
+            if (floorMatch) {
+                return floorMatch[1] + '階';
+            }
+            
+            // 部屋番号を抽出
+            const roomMatch = address.match(/(\d+)号室/);
+            if (roomMatch) {
+                return roomMatch[1] + '号室';
+            }
+            
+            return '';
+        }
+        
+        // 同一住所のデータをグループ化
+        function groupByAddress(dataList) {
+            const groups = {};
+            
+            dataList.forEach(item => {
+                const normalizedAddr = normalizeAddress(item.address);
+                
+                if (!groups[normalizedAddr]) {
+                    groups[normalizedAddr] = {
+                        ...item,
+                        originalAddress: item.address,
+                        count: 1,
+                        floors: [],
+                        allItems: [item]
+                    };
+                    
+                    const floor = extractFloorInfo(item.address);
+                    if (floor) {
+                        groups[normalizedAddr].floors.push(floor);
+                    }
+                } else {
+                    groups[normalizedAddr].count++;
+                    groups[normalizedAddr].allItems.push(item);
+                    
+                    const floor = extractFloorInfo(item.address);
+                    if (floor && !groups[normalizedAddr].floors.includes(floor)) {
+                        groups[normalizedAddr].floors.push(floor);
+                    }
+                    
+                    // 会社情報を結合
+                    if (item.info && !groups[normalizedAddr].info.includes(item.info)) {
+                        groups[normalizedAddr].info = groups[normalizedAddr].info 
+                            ? groups[normalizedAddr].info + ' / ' + item.info 
+                            : item.info;
+                    }
+                }
+            });
+            
+            // グループをリストに変換
+            return Object.values(groups).map(group => {
+                // 階数情報を備考に追加
+                let floorNote = '';
+                if (group.floors.length > 0) {
+                    floorNote = '【階数】' + group.floors.join(', ');
+                }
+                
+                return {
+                    ...group,
+                    company: group.company,
+                    displayName: group.company + (group.count > 1 ? `（${group.count}台）` : ''),
+                    note: floorNote + (group.info ? '\n' + group.info : ''),
+                    info: group.info
+                };
+            });
+        }
+        
         // Excelデータをパース（マーフィード形式対応）
         function parseExcelData(rows) {
             const data = [];
@@ -441,9 +535,14 @@
             }
             
             if (data.length > 0) {
-                console.log('読み込んだデータ数:', data.length);
-                console.log('最初のデータ:', data[0]);
-                geocodeAddresses(data);
+                console.log('読み込んだデータ数（グループ化前）:', data.length);
+                
+                // 同一住所をグループ化
+                const groupedData = groupByAddress(data);
+                console.log('読み込んだデータ数（グループ化後）:', groupedData.length);
+                console.log('最初のデータ:', groupedData[0]);
+                
+                geocodeAddresses(groupedData);
             } else {
                 alert('データがありません。ファイル形式を確認してください。');
             }
@@ -546,12 +645,15 @@
         function createMarker(item) {
             const route = ROUTES[item.routeId] || ROUTES[0];
             
+            // 表示名（台数付き）
+            const displayName = item.displayName || item.company;
+            
             const marker = new google.maps.Marker({
                 position: item.position,
                 map: map,
-                title: item.company,
+                title: displayName,
                 label: {
-                    text: item.company,
+                    text: displayName,
                     className: 'marker-label',
                     fontSize: '11px',
                     fontWeight: 'bold'
@@ -575,6 +677,17 @@
         function showInfoWindow(item, marker) {
             const route = ROUTES[item.routeId] || ROUTES[0];
             
+            // 表示名（台数付き）
+            const displayName = item.displayName || item.company;
+            
+            // 台数表示
+            const countDisplay = item.count > 1 ? `<div style="background: #e3f2fd; padding: 4px 8px; border-radius: 4px; margin-bottom: 8px; font-size: 13px;">📦 <strong>${item.count}台</strong> 設置</div>` : '';
+            
+            // 階数情報
+            const floorDisplay = (item.floors && item.floors.length > 0) 
+                ? `<div class="info-row"><span class="info-label">🏢 設置階：</span>${item.floors.join(', ')}</div>` 
+                : '';
+            
             // ルート選択オプション
             let routeOptions = ROUTES.map(r => 
                 `<option value="${r.id}" ${item.routeId === r.id ? 'selected' : ''}>${r.name}</option>`
@@ -582,12 +695,16 @@
             
             const content = `
                 <div class="info-form">
-                    <h3>${item.company}</h3>
+                    <h3>${displayName}</h3>
+                    
+                    ${countDisplay}
                     
                     <div class="info-row">
                         <span class="info-label">📍 住所：</span><br>
                         ${item.address}
                     </div>
+                    
+                    ${floorDisplay}
                     
                     <div class="info-row">
                         <span class="info-label">👤 担当者：</span>
@@ -771,13 +888,20 @@
                 const dateTime = item.appointmentDate ? 
                     `${item.appointmentDate} ${item.appointmentTime || ''}`.trim() : '';
                 
+                // 台数表示
+                const countStr = item.count > 1 ? `${item.count}台` : '1台';
+                
+                // 階数情報
+                const floorStr = (item.floors && item.floors.length > 0) ? item.floors.join(', ') : '';
+                
                 return [
                     item.no,
                     item.company,
+                    countStr,
                     item.address,
+                    floorStr,
                     item.phone,
                     item.contact,
-                    item.info || '',
                     route.name,
                     dateTime,
                     item.note || ''
@@ -786,21 +910,21 @@
             
             // ルートでソート
             tableData.sort((a, b) => {
-                const routeA = ROUTES.findIndex(r => r.name === a[6]);
-                const routeB = ROUTES.findIndex(r => r.name === b[6]);
+                const routeA = ROUTES.findIndex(r => r.name === a[7]);
+                const routeB = ROUTES.findIndex(r => r.name === b[7]);
                 return routeA - routeB;
             });
             
             // テーブル描画
             doc.autoTable({
                 head: [[
-                    'No', 'Company', 'Address', 'Phone', 
-                    'Contact', 'Info', 'Route', 'Appointment', 'Note'
+                    'No', 'Company', 'Count', 'Address', 'Floor',
+                    'Phone', 'Contact', 'Route', 'Appointment', 'Note'
                 ]],
                 body: tableData,
                 startY: 28,
                 styles: {
-                    fontSize: 8,
+                    fontSize: 7,
                     cellPadding: 2,
                 },
                 headStyles: {
@@ -809,19 +933,20 @@
                     fontStyle: 'bold',
                 },
                 columnStyles: {
-                    0: { cellWidth: 12 },
-                    1: { cellWidth: 35 },
-                    2: { cellWidth: 50 },
-                    3: { cellWidth: 25 },
+                    0: { cellWidth: 10 },
+                    1: { cellWidth: 30 },
+                    2: { cellWidth: 12 },
+                    3: { cellWidth: 45 },
                     4: { cellWidth: 20 },
-                    5: { cellWidth: 30 },
+                    5: { cellWidth: 22 },
                     6: { cellWidth: 18 },
-                    7: { cellWidth: 28 },
-                    8: { cellWidth: 35 },
+                    7: { cellWidth: 16 },
+                    8: { cellWidth: 25 },
+                    9: { cellWidth: 30 },
                 },
                 didParseCell: function(data) {
                     // ルート列に色をつける
-                    if (data.column.index === 6 && data.section === 'body') {
+                    if (data.column.index === 7 && data.section === 'body') {
                         const routeName = data.cell.raw;
                         const route = ROUTES.find(r => r.name === routeName);
                         if (route && route.id !== 0) {
@@ -852,7 +977,7 @@
 
     <!-- ★★★ 下の YOUR_API_KEY_HERE をあなたのAPIキーに置き換えてね！ ★★★ -->
     <script async defer
-        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAbzPpvv1voF_qjTfyQdKiCZ0cGL6yeVio&callback=initMap">
+        src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY_HERE&callback=initMap">
     </script>
 </body>
 </html>
