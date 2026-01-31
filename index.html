@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>メンテナンスマップ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            min-height: 100vh;
+            overflow: hidden;
+            background: linear-gradient(135deg, #1a237e 0%, #4285f4 50%, #00bcd4 100%);
+        }
+        
+        .splash-container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+        
+        /* 背景のアニメーション地図グリッド */
+        .grid-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: gridMove 20s linear infinite;
+        }
+        
+        @keyframes gridMove {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+        
+        /* 浮遊するマーカーたち */
+        .floating-markers {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            pointer-events: none;
+        }
+        
+        .marker {
+            position: absolute;
+            font-size: 24px;
+            opacity: 0;
+            animation: floatUp 8s ease-in-out infinite;
+        }
+        
+        .marker:nth-child(1) { left: 10%; animation-delay: 0s; }
+        .marker:nth-child(2) { left: 25%; animation-delay: 1.5s; }
+        .marker:nth-child(3) { left: 40%; animation-delay: 3s; }
+        .marker:nth-child(4) { left: 55%; animation-delay: 0.5s; }
+        .marker:nth-child(5) { left: 70%; animation-delay: 2s; }
+        .marker:nth-child(6) { left: 85%; animation-delay: 4s; }
+        .marker:nth-child(7) { left: 15%; animation-delay: 2.5s; }
+        .marker:nth-child(8) { left: 60%; animation-delay: 3.5s; }
+        
+        @keyframes floatUp {
+            0% {
+                transform: translateY(100vh) scale(0.5);
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.6;
+            }
+            90% {
+                opacity: 0.6;
+            }
+            100% {
+                transform: translateY(-100px) scale(1);
+                opacity: 0;
+            }
+        }
+        
+        /* メインロゴエリア */
+        .logo-area {
+            text-align: center;
+            z-index: 10;
+        }
+        
+        /* 地図アイコン */
+        .map-icon {
+            font-size: 80px;
+            animation: bounce 2s ease-in-out infinite, fadeInScale 0.8s ease-out;
+            filter: drop-shadow(0 10px 30px rgba(0,0,0,0.3));
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+        
+        @keyframes fadeInScale {
+            0% {
+                opacity: 0;
+                transform: scale(0.5);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        /* タイトル */
+        .title {
+            color: white;
+            font-size: 36px;
+            font-weight: 900;
+            margin-top: 20px;
+            text-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            animation: slideUp 0.8s ease-out 0.3s both;
+            letter-spacing: 2px;
+        }
+        
+        @keyframes slideUp {
+            0% {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* サブタイトル */
+        .subtitle {
+            color: rgba(255,255,255,0.9);
+            font-size: 14px;
+            margin-top: 12px;
+            animation: slideUp 0.8s ease-out 0.5s both;
+            letter-spacing: 1px;
+        }
+        
+        /* 機能アイコン群 */
+        .features {
+            display: flex;
+            gap: 30px;
+            margin-top: 40px;
+            animation: slideUp 0.8s ease-out 0.7s both;
+        }
+        
+        .feature {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .feature-icon {
+            width: 50px;
+            height: 50px;
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .feature-icon:hover {
+            transform: scale(1.1);
+            background: rgba(255,255,255,0.25);
+        }
+        
+        .feature-text {
+            color: rgba(255,255,255,0.8);
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        /* ローディングバー */
+        .loading-bar-container {
+            width: 200px;
+            height: 4px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 2px;
+            margin-top: 50px;
+            overflow: hidden;
+            animation: slideUp 0.8s ease-out 0.9s both;
+        }
+        
+        .loading-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #fff, #00bcd4, #fff);
+            background-size: 200% 100%;
+            border-radius: 2px;
+            animation: loading 2s ease-in-out forwards, shimmer 1s linear infinite;
+        }
+        
+        @keyframes loading {
+            0% { width: 0%; }
+            100% { width: 100%; }
+        }
+        
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        
+        /* 開始ボタン */
+        .start-btn {
+            margin-top: 30px;
+            padding: 16px 50px;
+            font-size: 16px;
+            font-weight: 700;
+            color: #4285f4;
+            background: white;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            animation: slideUp 0.8s ease-out 1.1s both;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .start-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 50px rgba(0,0,0,0.3);
+        }
+        
+        .start-btn:active {
+            transform: translateY(0);
+        }
+        
+        /* バージョン表示 */
+        .version {
+            position: absolute;
+            bottom: 20px;
+            color: rgba(255,255,255,0.5);
+            font-size: 11px;
+            animation: fadeIn 1s ease-out 1.5s both;
+        }
+        
+        @keyframes fadeIn {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+        
+        /* Marfeed ロゴ */
+        .marfeed-badge {
+            position: absolute;
+            bottom: 50px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: rgba(255,255,255,0.6);
+            font-size: 12px;
+            animation: fadeIn 1s ease-out 1.3s both;
+        }
+        
+        .marfeed-badge span {
+            font-weight: 600;
+        }
+        
+        /* レスポンシブ */
+        @media (max-width: 480px) {
+            .map-icon {
+                font-size: 60px;
+            }
+            .title {
+                font-size: 28px;
+            }
+            .features {
+                gap: 20px;
+            }
+            .feature-icon {
+                width: 44px;
+                height: 44px;
+                font-size: 20px;
+            }
+            .start-btn {
+                padding: 14px 40px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="splash-container">
+        <!-- 背景グリッド -->
+        <div class="grid-bg"></div>
+        
+        <!-- 浮遊マーカー -->
+        <div class="floating-markers">
+            <div class="marker">📍</div>
+            <div class="marker">🔴</div>
+            <div class="marker">🟢</div>
+            <div class="marker">🔵</div>
+            <div class="marker">🟡</div>
+            <div class="marker">🟣</div>
+            <div class="marker">📍</div>
+            <div class="marker">🟠</div>
+        </div>
+        
+        <!-- メインロゴ -->
+        <div class="logo-area">
+            <div class="map-icon">🗺️</div>
+            <h1 class="title">メンテナンスマップ</h1>
+            <p class="subtitle">ウォーターサーバー メンテナンス管理システム</p>
+            
+            <!-- 機能アイコン -->
+            <div class="features">
+                <div class="feature">
+                    <div class="feature-icon">📁</div>
+                    <span class="feature-text">Excel/CSV</span>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">📍</div>
+                    <span class="feature-text">自動マッピング</span>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🎨</div>
+                    <span class="feature-text">ルート管理</span>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">📄</div>
+                    <span class="feature-text">PDF出力</span>
+                </div>
+            </div>
+            
+            <!-- ローディングバー -->
+            <div class="loading-bar-container">
+                <div class="loading-bar"></div>
+            </div>
+            
+            <!-- 開始ボタン -->
+            <button class="start-btn" onclick="startApp()">
+                <span>🚀</span>
+                <span>はじめる</span>
+            </button>
+        </div>
+        
+        <!-- Marfeedバッジ -->
+        <div class="marfeed-badge">
+            💧 <span>Marfeed</span> Water Server Maintenance
+        </div>
+        
+        <!-- バージョン -->
+        <div class="version">Version 1.0.0</div>
+    </div>
+    
+    <script>
+        function startApp() {
+            // ボタンをクリックしたらメイン画面へ
+            document.body.style.transition = 'opacity 0.5s ease';
+            document.body.style.opacity = '0';
+            
+            setTimeout(() => {
+                window.location.href = 'app.html';
+            }, 500);
+        }
+        
+        // 3秒後に自動で遷移（オプション）
+        // setTimeout(startApp, 3000);
+    </script>
+</body>
+</html>
