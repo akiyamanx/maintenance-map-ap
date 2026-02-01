@@ -739,6 +739,129 @@
             background: #3367d6;
         }
         
+        /* ============================================
+           リスト表示モーダル
+           ============================================ */
+        .list-modal {
+            width: 95%;
+            max-width: 900px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .list-modal h2 {
+            margin: 0 0 12px 0;
+            color: #333;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        .list-info {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 12px;
+            flex-shrink: 0;
+        }
+        .list-container {
+            flex: 1;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #fff;
+        }
+        .list-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .list-table th {
+            background: #4285f4;
+            color: white;
+            padding: 10px 8px;
+            text-align: left;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            white-space: nowrap;
+        }
+        .list-table td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #eee;
+            vertical-align: top;
+        }
+        .list-table tr:hover {
+            background: #f5f5f5;
+        }
+        .list-table tr:nth-child(even) {
+            background: #fafafa;
+        }
+        .list-table tr:nth-child(even):hover {
+            background: #f0f0f0;
+        }
+        .list-table .col-no {
+            width: 50px;
+            text-align: center;
+            color: #666;
+        }
+        .list-table .col-company {
+            min-width: 120px;
+            font-weight: bold;
+            color: #333;
+        }
+        .list-table .col-address {
+            min-width: 180px;
+            color: #555;
+        }
+        .list-table .col-phone {
+            min-width: 100px;
+            white-space: nowrap;
+        }
+        .list-table .col-contact {
+            min-width: 80px;
+        }
+        .list-table .col-route {
+            width: 60px;
+            text-align: center;
+        }
+        .route-badge-small {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: bold;
+            color: white;
+        }
+        .list-close-btn {
+            margin-top: 12px;
+            padding: 12px 24px;
+            background: #4285f4;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .list-close-btn:hover {
+            background: #3367d6;
+        }
+        .btn-list {
+            background: #9c27b0;
+        }
+        .btn-list:hover {
+            background: #7b1fa2;
+        }
+        .list-empty {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+            font-size: 15px;
+        }
+        
         /* 確認ダイアログ */
         .confirm-buttons {
             display: flex;
@@ -862,6 +985,9 @@
             <button class="btn btn-add" onclick="showAddModal()">
                 ➕ 追加
             </button>
+            <button class="btn btn-list" onclick="showListModal()">
+                📋 リスト
+            </button>
             <button class="btn btn-pdf" onclick="exportPDF()">
                 📄 PDF
             </button>
@@ -938,6 +1064,31 @@
                     <button class="confirm-cancel" onclick="hideResetConfirm()">キャンセル</button>
                     <button class="confirm-delete" onclick="resetAllData()">削除する</button>
                 </div>
+            </div>
+        </div>
+        
+        <!-- リスト表示モーダル -->
+        <div class="modal-overlay" id="listModal">
+            <div class="modal list-modal">
+                <h2>📋 メンテナンスリスト</h2>
+                <div class="list-info" id="listInfo">全 0 件</div>
+                <div class="list-container">
+                    <table class="list-table">
+                        <thead>
+                            <tr>
+                                <th class="col-no">No</th>
+                                <th class="col-company">会社名</th>
+                                <th class="col-address">住所</th>
+                                <th class="col-phone">電話番号</th>
+                                <th class="col-contact">担当者</th>
+                                <th class="col-route">ルート</th>
+                            </tr>
+                        </thead>
+                        <tbody id="listTableBody">
+                        </tbody>
+                    </table>
+                </div>
+                <button class="list-close-btn" onclick="hideListModal()">閉じる</button>
             </div>
         </div>
     </div>
@@ -1114,6 +1265,56 @@
         
         function hideResetConfirm() {
             document.getElementById('resetModal').classList.remove('show');
+        }
+        
+        // ============================================
+        // リスト表示機能
+        // ============================================
+        function showListModal() {
+            if (locationData.length === 0) {
+                alert('表示するデータがありません。\nまずCSVまたはExcelファイルを読み込んでください。');
+                return;
+            }
+            
+            const tbody = document.getElementById('listTableBody');
+            tbody.innerHTML = '';
+            
+            // データをソート（ルート順→会社名順）
+            const sortedData = [...locationData].sort((a, b) => {
+                if (a.routeId !== b.routeId) return a.routeId - b.routeId;
+                return (a.company || '').localeCompare(b.company || '', 'ja');
+            });
+            
+            sortedData.forEach((item, index) => {
+                const route = ROUTES.find(r => r.id === item.routeId) || ROUTES[0];
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="col-no">${index + 1}</td>
+                    <td class="col-company">${escapeHtml(item.company || '')}</td>
+                    <td class="col-address">${escapeHtml(item.address || '')}</td>
+                    <td class="col-phone">${escapeHtml(item.phone || '-')}</td>
+                    <td class="col-contact">${escapeHtml(item.contact || '-')}</td>
+                    <td class="col-route">
+                        <span class="route-badge-small" style="background-color: ${route.color}">
+                            ${route.name}
+                        </span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            
+            document.getElementById('listInfo').textContent = `全 ${locationData.length} 件`;
+            document.getElementById('listModal').classList.add('show');
+        }
+        
+        function hideListModal() {
+            document.getElementById('listModal').classList.remove('show');
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
         
         function resetAllData() {
@@ -1541,7 +1742,7 @@
     </script>
 
     <!-- Google Maps API -->
-    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAbzPpvv1voF_qjTfyQdKiCZ0cGL6yeVio&callback=initMap"></script>
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY_HERE&callback=initMap"></script>
     
     <!-- Service Worker登録 -->
     <script>
