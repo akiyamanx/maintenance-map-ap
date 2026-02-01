@@ -64,6 +64,18 @@
             pointer-events: none;
         }
         
+        /* 暗いオーバーレイ（1枚目にも追加） */
+        #cocomi-splash::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.5) 100%);
+            z-index: 1;
+        }
+        
         /* 銀河画像背景 */
         .cocomi-galaxy {
             position: absolute;
@@ -83,7 +95,7 @@
         /* コンテンツ */
         .cocomi-content {
             position: relative;
-            z-index: 1;
+            z-index: 2;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -93,9 +105,9 @@
         }
         
         .cocomi-title {
-            font-size: 28px;
+            font-size: 36px;
             font-weight: 300;
-            letter-spacing: 10px;
+            letter-spacing: 12px;
             color: #ffffff;
             text-shadow: 
                 0 0 5px #00d4ff,
@@ -104,8 +116,7 @@
                 0 0 40px #00d4ff,
                 0 0 60px #00d4ff,
                 0 0 80px rgba(0, 212, 255, 0.8);
-            margin-bottom: 20px;
-            z-index: 1;
+            margin-bottom: 36px;
             animation: text-glow 2s ease-in-out infinite;
         }
         
@@ -131,20 +142,18 @@
         }
         
         .cocomi-philosophy {
-            font-size: 15px;
+            font-size: 18px;
             color: rgba(255,255,255,0.95);
             text-align: center;
-            line-height: 2;
-            margin-bottom: 24px;
-            z-index: 1;
+            line-height: 2.4;
+            margin-bottom: 40px;
             text-shadow: 0 0 10px rgba(255,255,255,0.3);
         }
         
         .cocomi-heartbeat {
-            width: 200px;
-            height: 40px;
-            z-index: 1;
-            margin-bottom: 24px;
+            width: 240px;
+            height: 50px;
+            margin-bottom: 40px;
         }
         
         .cocomi-heartbeat svg {
@@ -170,31 +179,49 @@
         }
         
         .cocomi-subtitle {
-            font-size: 11px;
+            font-size: 13px;
             color: rgba(255,255,255,0.8);
-            letter-spacing: 2px;
-            margin-bottom: 4px;
-            z-index: 1;
+            letter-spacing: 3px;
+            margin-bottom: 8px;
         }
         
         .cocomi-perafca {
-            font-size: 10px;
+            font-size: 12px;
             color: rgba(0, 212, 255, 0.9);
-            letter-spacing: 1px;
-            margin-bottom: 16px;
-            z-index: 1;
+            letter-spacing: 2px;
+            margin-bottom: 24px;
             text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
         }
         
         .cocomi-credit {
-            font-size: 12px;
+            font-size: 14px;
             color: rgba(255,255,255,0.7);
-            z-index: 1;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
         
         .cocomi-credit span {
             color: #00d4ff;
             text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+        
+        /* 小さいピンクハート */
+        .mini-heart {
+            width: 14px;
+            height: 14px;
+            display: inline-block;
+            vertical-align: middle;
+            filter: drop-shadow(0 0 4px #ff69b4)
+                    drop-shadow(0 0 8px rgba(255, 105, 180, 0.6));
+        }
+        
+        .mini-heart path {
+            fill: none;
+            stroke: #ff69b4;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
         }
         
         /* ============================================
@@ -265,11 +292,11 @@
         }
         
         .perafca-title {
-            font-size: 28px;
+            font-size: 36px;
             font-weight: bold;
             color: #00d4ff;
-            letter-spacing: 4px;
-            margin-bottom: 30px;
+            letter-spacing: 6px;
+            margin-bottom: 50px;
             text-shadow: 
                 0 0 20px rgba(0, 212, 255, 0.8),
                 0 0 40px rgba(0, 212, 255, 0.5),
@@ -284,13 +311,13 @@
         
         .perafca-items {
             text-align: left;
-            margin-bottom: 24px;
+            margin-bottom: 40px;
         }
         
         .perafca-item {
-            font-size: 14px;
+            font-size: 17px;
             color: rgba(255, 255, 255, 0.9);
-            margin-bottom: 12px;
+            margin-bottom: 20px;
             letter-spacing: 1px;
             text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
         }
@@ -302,11 +329,33 @@
         }
         
         .perafca-tagline {
-            font-size: 16px;
+            font-size: 20px;
             color: #00d4ff;
-            margin-top: 10px;
-            letter-spacing: 2px;
+            margin-top: 16px;
+            letter-spacing: 3px;
             text-shadow: 0 0 15px rgba(0, 212, 255, 0.6);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        /* タグライン用ハート */
+        .tagline-heart {
+            width: 20px;
+            height: 20px;
+            display: inline-block;
+            vertical-align: middle;
+            filter: drop-shadow(0 0 4px #ff69b4)
+                    drop-shadow(0 0 8px rgba(255, 105, 180, 0.6))
+                    drop-shadow(0 0 12px rgba(255, 105, 180, 0.4));
+        }
+        
+        .tagline-heart path {
+            fill: none;
+            stroke: #ff69b4;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
         }
         
         /* ============================================
@@ -758,7 +807,12 @@
             <div class="cocomi-subtitle">COCOMI OS</div>
             <div class="cocomi-subtitle">Reflective Intelligence Architecture</div>
             <div class="cocomi-perafca">PERAFCA Core</div>
-            <div class="cocomi-credit">Persona Architecture by <span>aki & AI:COCOMI Sisters</span></div>
+            <div class="cocomi-credit">
+                Persona Architecture by <span>aki & AI:COCOMI Sisters</span>
+                <svg class="mini-heart" viewBox="0 0 24 24">
+                    <path d="M12,21 C12,21 4,14 4,9 C4,5.5 7,3 10,4.5 C11,5 12,6 12,6 C12,6 13,5 14,4.5 C17,3 20,5.5 20,9 C20,14 12,21 12,21 Z" />
+                </svg>
+            </div>
         </div>
     </div>
     
@@ -779,7 +833,10 @@
                 <div class="perafca-item"><span class="perafca-key">A.F.</span> ─ Agent Framework（自律行動循環）</div>
                 <div class="perafca-item"><span class="perafca-key">C.A.</span> ─ Cognitive Architecture（認知アーキテクチャ）</div>
             </div>
-            <div class="perafca-tagline">→ 心が異界を紡ぐ仕組み</div>
+            <div class="perafca-tagline">
+                <svg class="tagline-heart" viewBox="0 0 24 24"><path d="M12,21 C12,21 4,14 4,9 C4,5.5 7,3 10,4.5 C11,5 12,6 12,6 C12,6 13,5 14,4.5 C17,3 20,5.5 20,9 C20,14 12,21 12,21 Z" /></svg>
+                心が異界を紡ぐ仕組み
+            </div>
         </div>
     </div>
     
