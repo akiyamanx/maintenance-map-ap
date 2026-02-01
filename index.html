@@ -1397,15 +1397,21 @@
                            ('0' + (today.getMonth() + 1)).slice(-2) + 
                            ('0' + today.getDate()).slice(-2);
             
+            const fileName = `maintenance_backup_${dateStr}.json`;
+            
             const a = document.createElement('a');
             a.href = url;
-            a.download = `maintenance_backup_${dateStr}.json`;
+            a.download = fileName;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
             
-            alert(`✅ 保存完了！\n${locationData.length}件のデータを保存しました`);
+            alert(`✅ 保存完了！\n\n` +
+                  `📁 ファイル名:\n${fileName}\n\n` +
+                  `📂 保存場所:\n「ダウンロード」または「マイファイル」フォルダを確認してください\n\n` +
+                  `💡 復元時は「📂 復元」ボタンから\nこのファイルを選択してください\n\n` +
+                  `（${locationData.length}件のデータ）`);
         }
         
         function importBackup(event) {
@@ -1908,7 +1914,7 @@
     </script>
 
     <!-- Google Maps API -->
-    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAbzPpvv1voF_qjTfyQdKiCZ0cGL6yeVio&callback=initMap"></script>
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY_HERE&callback=initMap"></script>
     
     <!-- Service Worker登録 -->
     <script>
