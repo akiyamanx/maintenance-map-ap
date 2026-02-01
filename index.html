@@ -1285,12 +1285,21 @@
                 return (a.company || '').localeCompare(b.company || '', 'ja');
             });
             
+            // 総台数を計算
+            let totalUnits = 0;
+            
             sortedData.forEach((item, index) => {
                 const route = ROUTES.find(r => r.id === item.routeId) || ROUTES[0];
+                const count = item.count || 1;
+                totalUnits += count;
+                
+                // 台数表示（2台以上の場合のみ表示）
+                const countDisplay = count > 1 ? `<span style="color: #e65100; font-weight: bold;">（${count}台）</span>` : '';
+                
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td class="col-no">${index + 1}</td>
-                    <td class="col-company">${escapeHtml(item.company || '')}</td>
+                    <td class="col-company">${escapeHtml(item.company || '')}${countDisplay}</td>
                     <td class="col-address">${escapeHtml(item.address || '')}</td>
                     <td class="col-phone">${escapeHtml(item.phone || '-')}</td>
                     <td class="col-contact">${escapeHtml(item.contact || '-')}</td>
@@ -1303,7 +1312,7 @@
                 tbody.appendChild(tr);
             });
             
-            document.getElementById('listInfo').textContent = `全 ${locationData.length} 件`;
+            document.getElementById('listInfo').textContent = `全 ${locationData.length} 件 ／ 合計 ${totalUnits} 台`;
             document.getElementById('listModal').classList.add('show');
         }
         
@@ -1742,7 +1751,7 @@
     </script>
 
     <!-- Google Maps API -->
-    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAbzPpvv1voF_qjTfyQdKiCZ0cGL6yeVio&callback=initMap"></script>
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY_HERE&callback=initMap"></script>
     
     <!-- Service Worker登録 -->
     <script>
