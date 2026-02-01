@@ -2,384 +2,1494 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>メンテナンスマップ</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    <!-- PWA設定 -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4285f4">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="メンテマップ">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    
+    <!-- プルトゥリフレッシュ無効化 -->
+    <style>
+        html, body {
+            overscroll-behavior-y: contain;
+        }
+    </style>
+    
+    <!-- PDF出力用ライブラリ -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <!-- Excel読み込み用ライブラリ -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
-        
         body {
-            font-family: 'Noto Sans JP', sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Noto Sans JP', 'Segoe UI', sans-serif;
+            background-color: #f3f4f6;
             min-height: 100vh;
-            overflow: hidden;
-            background: linear-gradient(135deg, #1a237e 0%, #4285f4 50%, #00bcd4 100%);
         }
         
-        .splash-container {
-            min-height: 100vh;
+        /* ============================================
+           COCOMI COREスプラッシュ（1段階目）
+           ============================================ */
+        #cocomi-splash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, #020810 0%, #0a1929 30%, #0d2137 50%, #0a1929 70%, #020810 100%);
             display: flex;
             flex-direction: column;
-            justify-content: center;
             align-items: center;
-            position: relative;
-        }
-        
-        /* 背景のアニメーション地図グリッド */
-        .grid-bg {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image: 
-                linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
-            background-size: 50px 50px;
-            animation: gridMove 20s linear infinite;
-        }
-        
-        @keyframes gridMove {
-            0% { transform: translate(0, 0); }
-            100% { transform: translate(50px, 50px); }
-        }
-        
-        /* 浮遊するマーカーたち */
-        .floating-markers {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            justify-content: center;
+            z-index: 10000;
+            transition: opacity 0.8s ease;
             overflow: hidden;
+        }
+        
+        #cocomi-splash.fade-out {
+            opacity: 0;
             pointer-events: none;
         }
         
-        .marker {
+        /* 星空背景 */
+        #cocomi-splash::before {
+            content: '';
             position: absolute;
-            font-size: 24px;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(2px 2px at 20px 30px, white, transparent),
+                radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.8), transparent),
+                radial-gradient(1px 1px at 90px 40px, white, transparent),
+                radial-gradient(2px 2px at 160px 120px, rgba(255,255,255,0.9), transparent),
+                radial-gradient(1px 1px at 230px 80px, white, transparent),
+                radial-gradient(2px 2px at 300px 150px, rgba(255,255,255,0.7), transparent),
+                radial-gradient(1px 1px at 100px 200px, white, transparent),
+                radial-gradient(2px 2px at 200px 250px, rgba(255,255,255,0.8), transparent),
+                radial-gradient(1px 1px at 50px 300px, white, transparent),
+                radial-gradient(2px 2px at 280px 320px, rgba(255,255,255,0.6), transparent),
+                radial-gradient(1px 1px at 350px 60px, white, transparent),
+                radial-gradient(1px 1px at 380px 200px, rgba(255,255,255,0.9), transparent),
+                radial-gradient(2px 2px at 150px 350px, white, transparent),
+                radial-gradient(1px 1px at 250px 400px, rgba(255,255,255,0.7), transparent),
+                radial-gradient(2px 2px at 320px 450px, white, transparent);
+            background-size: 400px 500px;
+            animation: twinkle 4s ease-in-out infinite;
+        }
+        
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 1; }
+        }
+        
+        /* 流れ星 */
+        #cocomi-splash::after {
+            content: '';
+            position: absolute;
+            top: 10%;
+            right: 15%;
+            width: 100px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00d4ff, white);
+            transform: rotate(45deg);
+            animation: shooting-star 3s ease-in-out infinite;
             opacity: 0;
-            animation: floatUp 8s ease-in-out infinite;
         }
         
-        .marker:nth-child(1) { left: 10%; animation-delay: 0s; }
-        .marker:nth-child(2) { left: 25%; animation-delay: 1.5s; }
-        .marker:nth-child(3) { left: 40%; animation-delay: 3s; }
-        .marker:nth-child(4) { left: 55%; animation-delay: 0.5s; }
-        .marker:nth-child(5) { left: 70%; animation-delay: 2s; }
-        .marker:nth-child(6) { left: 85%; animation-delay: 4s; }
-        .marker:nth-child(7) { left: 15%; animation-delay: 2.5s; }
-        .marker:nth-child(8) { left: 60%; animation-delay: 3.5s; }
+        @keyframes shooting-star {
+            0% { opacity: 0; transform: rotate(45deg) translateX(0); }
+            10% { opacity: 1; }
+            30% { opacity: 0; transform: rotate(45deg) translateX(-200px); }
+            100% { opacity: 0; }
+        }
         
-        @keyframes floatUp {
-            0% {
-                transform: translateY(100vh) scale(0.5);
-                opacity: 0;
+        /* 銀河の輝き */
+        .cocomi-glow {
+            position: absolute;
+            width: 300%;
+            height: 300%;
+            background: radial-gradient(ellipse at center, rgba(0, 150, 255, 0.15) 0%, transparent 40%);
+            animation: cocomi-glow 4s ease-in-out infinite;
+        }
+        
+        @keyframes cocomi-glow {
+            0%, 100% { opacity: 0.5; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.1); }
+        }
+        
+        .cocomi-title {
+            font-size: 28px;
+            font-weight: 300;
+            letter-spacing: 10px;
+            color: #ffffff;
+            text-shadow: 
+                0 0 5px #00d4ff,
+                0 0 10px #00d4ff,
+                0 0 20px #00d4ff,
+                0 0 40px #00d4ff,
+                0 0 60px #00d4ff,
+                0 0 80px rgba(0, 212, 255, 0.8);
+            margin-bottom: 20px;
+            z-index: 1;
+            animation: text-glow 2s ease-in-out infinite;
+        }
+        
+        @keyframes text-glow {
+            0%, 100% { 
+                text-shadow: 
+                    0 0 5px #00d4ff,
+                    0 0 10px #00d4ff,
+                    0 0 20px #00d4ff,
+                    0 0 40px #00d4ff,
+                    0 0 60px #00d4ff,
+                    0 0 80px rgba(0, 212, 255, 0.8);
             }
-            10% {
-                opacity: 0.6;
-            }
-            90% {
-                opacity: 0.6;
-            }
-            100% {
-                transform: translateY(-100px) scale(1);
-                opacity: 0;
+            50% { 
+                text-shadow: 
+                    0 0 10px #00ffff,
+                    0 0 20px #00ffff,
+                    0 0 40px #00ffff,
+                    0 0 80px #00d4ff,
+                    0 0 120px #00d4ff,
+                    0 0 180px rgba(0, 212, 255, 0.9);
             }
         }
         
-        /* メインロゴエリア */
-        .logo-area {
+        .cocomi-philosophy {
+            font-size: 15px;
+            color: rgba(255,255,255,0.95);
             text-align: center;
-            z-index: 10;
+            line-height: 2;
+            margin-bottom: 24px;
+            z-index: 1;
+            text-shadow: 0 0 10px rgba(255,255,255,0.3);
         }
         
-        /* 地図アイコン */
-        .map-icon {
+        .cocomi-heartbeat {
+            width: 200px;
+            height: 40px;
+            z-index: 1;
+            margin-bottom: 24px;
+        }
+        
+        .cocomi-heartbeat svg {
+            width: 100%;
+            height: 100%;
+            filter: drop-shadow(0 0 8px #00d4ff);
+        }
+        
+        .heartbeat-line {
+            fill: none;
+            stroke: #00d4ff;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-dasharray: 300;
+            stroke-dashoffset: 300;
+            animation: heartbeat-draw 2s ease-in-out infinite;
+        }
+        
+        @keyframes heartbeat-draw {
+            0% { stroke-dashoffset: 300; }
+            50% { stroke-dashoffset: 0; }
+            100% { stroke-dashoffset: -300; }
+        }
+        
+        .cocomi-subtitle {
+            font-size: 11px;
+            color: rgba(255,255,255,0.8);
+            letter-spacing: 2px;
+            margin-bottom: 4px;
+            z-index: 1;
+        }
+        
+        .cocomi-perafca {
+            font-size: 10px;
+            color: rgba(0, 212, 255, 0.9);
+            letter-spacing: 1px;
+            margin-bottom: 16px;
+            z-index: 1;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+        
+        .cocomi-credit {
+            font-size: 12px;
+            color: rgba(255,255,255,0.7);
+            z-index: 1;
+        }
+        
+        .cocomi-credit span {
+            color: #00d4ff;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+        
+        /* ============================================
+           PERAFCAスプラッシュ（2段階目）
+           ============================================ */
+        #perafca-splash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(ellipse at center, rgba(20, 0, 50, 0.3) 0%, rgba(0, 0, 0, 0.8) 100%),
+                url('https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/M31_09-01-2011_%28cropped%29.jpg/1280px-M31_09-01-2011_%28cropped%29.jpg');
+            background-size: cover;
+            background-position: center;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10001;
+            opacity: 0;
+            transition: opacity 0.8s ease;
+        }
+        
+        #perafca-splash.active {
+            display: flex;
+            opacity: 1;
+        }
+        
+        #perafca-splash.fade-out {
+            opacity: 0;
+        }
+        
+        .perafca-title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #00d4ff;
+            letter-spacing: 4px;
+            margin-bottom: 30px;
+            text-shadow: 
+                0 0 20px rgba(0, 212, 255, 0.8),
+                0 0 40px rgba(0, 212, 255, 0.5),
+                0 0 60px rgba(0, 212, 255, 0.3);
+            animation: neonPulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes neonPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+        
+        .perafca-items {
+            text-align: left;
+            margin-bottom: 24px;
+        }
+        
+        .perafca-item {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 12px;
+            letter-spacing: 1px;
+            text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+        
+        .perafca-key {
+            color: #00d4ff;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.6);
+        }
+        
+        .perafca-tagline {
+            font-size: 16px;
+            color: #00d4ff;
+            margin-top: 10px;
+            letter-spacing: 2px;
+            text-shadow: 0 0 15px rgba(0, 212, 255, 0.6);
+        }
+        
+        /* ============================================
+           アプリスプラッシュ（3段階目）
+           ============================================ */
+        #app-splash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #4285f4 0%, #1a73e8 100%);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease;
+            opacity: 0;
+        }
+        
+        #app-splash.active {
+            display: flex;
+            opacity: 1;
+        }
+        
+        #app-splash.fade-out {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .app-splash-icon {
             font-size: 80px;
-            animation: bounce 2s ease-in-out infinite, fadeInScale 0.8s ease-out;
-            filter: drop-shadow(0 10px 30px rgba(0,0,0,0.3));
+            margin-bottom: 24px;
+            animation: splash-bounce 1s ease infinite;
         }
         
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-15px); }
-        }
-        
-        @keyframes fadeInScale {
-            0% {
-                opacity: 0;
-                transform: scale(0.5);
-            }
-            100% {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-        
-        /* タイトル */
-        .title {
+        .app-splash-title {
             color: white;
-            font-size: 36px;
-            font-weight: 900;
-            margin-top: 20px;
-            text-shadow: 0 4px 20px rgba(0,0,0,0.3);
-            animation: slideUp 0.8s ease-out 0.3s both;
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 8px;
             letter-spacing: 2px;
         }
         
-        @keyframes slideUp {
-            0% {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            100% {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        /* サブタイトル */
-        .subtitle {
+        .app-splash-subtitle {
             color: rgba(255,255,255,0.9);
             font-size: 14px;
-            margin-top: 12px;
-            animation: slideUp 0.8s ease-out 0.5s both;
-            letter-spacing: 1px;
+            margin-bottom: 32px;
         }
         
-        /* 機能アイコン群 */
-        .features {
-            display: flex;
-            gap: 30px;
-            margin-top: 40px;
-            animation: slideUp 0.8s ease-out 0.7s both;
+        .app-splash-loading {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: splash-spin 1s linear infinite;
         }
         
-        .feature {
+        @keyframes splash-bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        @keyframes splash-spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* ============================================
+           メインアプリのスタイル
+           ============================================ */
+        #main-app {
+            display: none;
+        }
+        
+        #main-app.active {
+            display: block;
+        }
+        
+        /* ヘッダー */
+        .header {
+            background: #4285f4;
+            color: white;
+            padding: 10px 12px;
             display: flex;
-            flex-direction: column;
             align-items: center;
             gap: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            position: relative;
+            z-index: 100;
+            flex-wrap: wrap;
         }
-        
-        .feature-icon {
-            width: 50px;
-            height: 50px;
-            background: rgba(255,255,255,0.15);
-            backdrop-filter: blur(10px);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            border: 1px solid rgba(255,255,255,0.2);
-            transition: all 0.3s ease;
-        }
-        
-        .feature-icon:hover {
-            transform: scale(1.1);
-            background: rgba(255,255,255,0.25);
-        }
-        
-        .feature-text {
-            color: rgba(255,255,255,0.8);
-            font-size: 11px;
-            font-weight: 600;
-        }
-        
-        /* ローディングバー */
-        .loading-bar-container {
-            width: 200px;
-            height: 4px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 2px;
-            margin-top: 50px;
-            overflow: hidden;
-            animation: slideUp 0.8s ease-out 0.9s both;
-        }
-        
-        .loading-bar {
-            height: 100%;
-            background: linear-gradient(90deg, #fff, #00bcd4, #fff);
-            background-size: 200% 100%;
-            border-radius: 2px;
-            animation: loading 2s ease-in-out forwards, shimmer 1s linear infinite;
-        }
-        
-        @keyframes loading {
-            0% { width: 0%; }
-            100% { width: 100%; }
-        }
-        
-        @keyframes shimmer {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
-        }
-        
-        /* 開始ボタン */
-        .start-btn {
-            margin-top: 30px;
-            padding: 16px 50px;
+        .header h1 {
             font-size: 16px;
-            font-weight: 700;
-            color: #4285f4;
-            background: white;
-            border: none;
-            border-radius: 30px;
-            cursor: pointer;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            transition: all 0.3s ease;
-            animation: slideUp 0.8s ease-out 1.1s both;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .start-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 50px rgba(0,0,0,0.3);
-        }
-        
-        .start-btn:active {
-            transform: translateY(0);
-        }
-        
-        /* バージョン表示 */
-        .version {
-            position: absolute;
-            bottom: 20px;
-            color: rgba(255,255,255,0.5);
-            font-size: 11px;
-            animation: fadeIn 1s ease-out 1.5s both;
-        }
-        
-        @keyframes fadeIn {
-            0% { opacity: 0; }
-            100% { opacity: 1; }
-        }
-        
-        /* Marfeed ロゴ */
-        .marfeed-badge {
-            position: absolute;
-            bottom: 50px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: rgba(255,255,255,0.6);
-            font-size: 12px;
-            animation: fadeIn 1s ease-out 1.3s both;
-        }
-        
-        .marfeed-badge span {
             font-weight: 600;
         }
         
-        /* レスポンシブ */
-        @media (max-width: 480px) {
-            .map-icon {
-                font-size: 60px;
-            }
-            .title {
-                font-size: 28px;
-            }
-            .features {
-                gap: 20px;
-            }
-            .feature-icon {
-                width: 44px;
-                height: 44px;
-                font-size: 20px;
-            }
-            .start-btn {
-                padding: 14px 40px;
-                font-size: 14px;
-            }
+        /* ボタン共通 */
+        .btn {
+            background: white;
+            color: #4285f4;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            white-space: nowrap;
+        }
+        .btn:hover {
+            background: #f0f0f0;
+        }
+        .btn-pdf {
+            background: #34a853;
+            color: white;
+        }
+        .btn-pdf:hover {
+            background: #2d8f47;
+        }
+        .btn-add {
+            background: #ff9800;
+            color: white;
+        }
+        .btn-add:hover {
+            background: #f57c00;
+        }
+        .btn-reset {
+            background: #f44336;
+            color: white;
+        }
+        .btn-reset:hover {
+            background: #d32f2f;
+        }
+        .btn-help {
+            background: #9c27b0;
+            color: white;
+        }
+        .btn-help:hover {
+            background: #7b1fa2;
+        }
+        
+        /* 件数表示 */
+        .count-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin-left: auto;
+        }
+        
+        /* 地図 */
+        #map {
+            width: 100%;
+            height: calc(100vh - 52px);
+        }
+        
+        /* ファイル入力を隠す */
+        #csvInput {
+            display: none;
+        }
+        
+        /* ローディング */
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 20px 40px;
+            border-radius: 10px;
+            z-index: 1000;
+            display: none;
+        }
+        .loading.show {
+            display: block;
+        }
+        
+        /* 会社名ラベルのスタイル */
+        .marker-label {
+            background: white;
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-size: 11px;
+            font-weight: bold;
+            white-space: nowrap;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        /* 吹き出し内のフォーム */
+        .info-form {
+            padding: 8px;
+            min-width: 260px;
+        }
+        .info-form h3 {
+            margin: 0 0 8px 0;
+            color: #333;
+            font-size: 16px;
+            border-bottom: 2px solid #4285f4;
+            padding-bottom: 6px;
+        }
+        .info-row {
+            margin: 6px 0;
+            font-size: 13px;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #555;
+        }
+        .info-form input, .info-form select, .info-form textarea {
+            width: 100%;
+            padding: 8px;
+            margin-top: 4px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .info-form textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+        .route-select {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .color-preview {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid #333;
+        }
+        .save-btn {
+            width: 100%;
+            background: #4285f4;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .save-btn:hover {
+            background: #3367d6;
+        }
+        .delete-btn {
+            width: 100%;
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 6px;
+        }
+        .delete-btn:hover {
+            background: #d32f2f;
+        }
+        
+        /* ルート凡例 */
+        .legend {
+            position: fixed;
+            bottom: 20px;
+            left: 10px;
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            z-index: 100;
+            font-size: 11px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .legend-title {
+            font-weight: bold;
+            margin-bottom: 6px;
+            font-size: 12px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin: 4px 0;
+        }
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 1px solid #333;
+        }
+        
+        /* モーダル */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-overlay.show {
+            display: flex;
+        }
+        .modal {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            width: 90%;
+            max-width: 400px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        .modal h2 {
+            margin: 0 0 16px 0;
+            color: #333;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .modal-row {
+            margin: 12px 0;
+        }
+        .modal-row label {
+            display: block;
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 4px;
+            font-size: 13px;
+        }
+        .modal-row input, .modal-row select, .modal-row textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .modal-row textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+        }
+        .modal-buttons button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .modal-cancel {
+            background: #e0e0e0;
+            color: #333;
+        }
+        .modal-cancel:hover {
+            background: #bdbdbd;
+        }
+        .modal-submit {
+            background: #4285f4;
+            color: white;
+        }
+        .modal-submit:hover {
+            background: #3367d6;
+        }
+        
+        /* 確認ダイアログ */
+        .confirm-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .confirm-buttons button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .confirm-cancel {
+            background: #e0e0e0;
+            color: #333;
+        }
+        .confirm-delete {
+            background: #f44336;
+            color: white;
+        }
+        .confirm-delete:hover {
+            background: #d32f2f;
+        }
+        .confirm-text {
+            text-align: center;
+            font-size: 15px;
+            color: #333;
+            line-height: 1.6;
+        }
+        .confirm-count {
+            font-size: 24px;
+            font-weight: bold;
+            color: #f44336;
+            margin: 10px 0;
         }
     </style>
 </head>
 <body>
-    <div class="splash-container">
-        <!-- 背景グリッド -->
-        <div class="grid-bg"></div>
-        
-        <!-- 浮遊マーカー -->
-        <div class="floating-markers">
-            <div class="marker">📍</div>
-            <div class="marker">🔴</div>
-            <div class="marker">🟢</div>
-            <div class="marker">🔵</div>
-            <div class="marker">🟡</div>
-            <div class="marker">🟣</div>
-            <div class="marker">📍</div>
-            <div class="marker">🟠</div>
+
+    <!-- ============================================
+         COCOMI COREスプラッシュ（1段階目）
+         ============================================ -->
+    <div id="cocomi-splash">
+        <div class="cocomi-glow"></div>
+        <div class="cocomi-title">COCOMI CORE</div>
+        <div class="cocomi-philosophy">
+            想いが構造になり、<br>
+            構造が証明になる。
         </div>
         
-        <!-- メインロゴ -->
-        <div class="logo-area">
-            <div class="map-icon">🗺️</div>
-            <h1 class="title">メンテナンスマップ</h1>
-            <p class="subtitle">ウォーターサーバー メンテナンス管理システム</p>
-            
-            <!-- 機能アイコン -->
-            <div class="features">
-                <div class="feature">
-                    <div class="feature-icon">📁</div>
-                    <span class="feature-text">Excel/CSV</span>
-                </div>
-                <div class="feature">
-                    <div class="feature-icon">📍</div>
-                    <span class="feature-text">自動マッピング</span>
-                </div>
-                <div class="feature">
-                    <div class="feature-icon">🎨</div>
-                    <span class="feature-text">ルート管理</span>
-                </div>
-                <div class="feature">
-                    <div class="feature-icon">📄</div>
-                    <span class="feature-text">PDF出力</span>
-                </div>
-            </div>
-            
-            <!-- ローディングバー -->
-            <div class="loading-bar-container">
-                <div class="loading-bar"></div>
-            </div>
-            
-            <!-- 開始ボタン -->
-            <button class="start-btn" onclick="startApp()">
-                <span>🚀</span>
-                <span>はじめる</span>
-            </button>
+        <!-- ハートビートライン -->
+        <div class="cocomi-heartbeat">
+            <svg viewBox="0 0 200 40">
+                <path class="heartbeat-line" d="M0,20 L40,20 L50,20 L60,5 L70,35 L80,15 L90,25 L100,20 L200,20" />
+            </svg>
         </div>
         
-        <!-- Marfeedバッジ -->
-        <div class="marfeed-badge">
-            💧 <span>Marfeed</span> Water Server Maintenance
-        </div>
-        
-        <!-- バージョン -->
-        <div class="version">Version 1.0.0</div>
+        <div class="cocomi-subtitle">Powered by</div>
+        <div class="cocomi-perafca">P.E.R.A.F.C.A Framework</div>
+        <div class="cocomi-credit">Created with <span>Claude</span></div>
     </div>
     
+    <!-- ============================================
+         PERAFCAスプラッシュ（2段階目）
+         ============================================ -->
+    <div id="perafca-splash">
+        <div class="perafca-title">P.E.R.A.F.C.A</div>
+        <div class="perafca-items">
+            <div class="perafca-item"><span class="perafca-key">P</span>urpose - 目的を明確に</div>
+            <div class="perafca-item"><span class="perafca-key">E</span>motion - 感情を大切に</div>
+            <div class="perafca-item"><span class="perafca-key">R</span>eality - 現実を見据えて</div>
+            <div class="perafca-item"><span class="perafca-key">A</span>ction - 行動で示す</div>
+            <div class="perafca-item"><span class="perafca-key">F</span>eedback - 振り返りを忘れずに</div>
+            <div class="perafca-item"><span class="perafca-key">C</span>onnection - 繋がりを紡いで</div>
+            <div class="perafca-item"><span class="perafca-key">A</span>daptation - 変化に適応する</div>
+        </div>
+        <div class="perafca-tagline">「温度」を持った開発哲学</div>
+    </div>
+    
+    <!-- ============================================
+         アプリスプラッシュ（3段階目）
+         ============================================ -->
+    <div id="app-splash">
+        <div class="app-splash-icon">🗺️</div>
+        <div class="app-splash-title">メンテナンスマップ</div>
+        <div class="app-splash-subtitle">Water Server Maintenance</div>
+        <div class="app-splash-loading"></div>
+    </div>
+    
+    <!-- ============================================
+         メインアプリ
+         ============================================ -->
+    <div id="main-app">
+        <div class="header">
+            <h1>🗺️ メンテナンスマップ</h1>
+            <button class="btn" onclick="document.getElementById('csvInput').click()">
+                📁 読込
+            </button>
+            <button class="btn btn-add" onclick="showAddModal()">
+                ➕ 追加
+            </button>
+            <button class="btn btn-pdf" onclick="exportPDF()">
+                📄 PDF
+            </button>
+            <button class="btn btn-reset" onclick="showResetConfirm()">
+                🗑️ リセット
+            </button>
+            <button class="btn btn-help" onclick="window.open('help.html', '_blank')">
+                ❓ ヘルプ
+            </button>
+            <div class="count-badge" id="countBadge">0件</div>
+        </div>
+        
+        <input type="file" id="csvInput" accept=".csv,.xlsx,.xls" onchange="handleFile(event)">
+        
+        <div id="map"></div>
+        
+        <!-- ルート凡例 -->
+        <div class="legend" id="legend" style="display: none;">
+            <div class="legend-title">📍 ルート凡例</div>
+            <div id="legendItems"></div>
+        </div>
+        
+        <div class="loading" id="loading">
+            📍 住所を変換中...<br>
+            <span id="loadingProgress"></span>
+        </div>
+        
+        <!-- 追加モーダル -->
+        <div class="modal-overlay" id="addModal">
+            <div class="modal">
+                <h2>➕ メンテナンス先を追加</h2>
+                <div class="modal-row">
+                    <label>会社名 *</label>
+                    <input type="text" id="addCompany" placeholder="例：㈱サンプル会社">
+                </div>
+                <div class="modal-row">
+                    <label>住所 *</label>
+                    <input type="text" id="addAddress" placeholder="例：東京都港区虎ノ門1-1-1">
+                </div>
+                <div class="modal-row">
+                    <label>電話番号</label>
+                    <input type="tel" id="addPhone" placeholder="例：03-1234-5678">
+                </div>
+                <div class="modal-row">
+                    <label>担当者</label>
+                    <input type="text" id="addContact" placeholder="例：山田様">
+                </div>
+                <div class="modal-row">
+                    <label>ルート</label>
+                    <select id="addRoute"></select>
+                </div>
+                <div class="modal-row">
+                    <label>備考</label>
+                    <textarea id="addNote" placeholder="駐車場情報など..."></textarea>
+                </div>
+                <div class="modal-buttons">
+                    <button class="modal-cancel" onclick="hideAddModal()">キャンセル</button>
+                    <button class="modal-submit" onclick="addNewLocation()">追加する</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- リセット確認モーダル -->
+        <div class="modal-overlay" id="resetModal">
+            <div class="modal">
+                <h2>🗑️ データをリセット</h2>
+                <div class="confirm-text">
+                    現在のデータをすべて削除しますか？<br>
+                    この操作は取り消せません。
+                    <div class="confirm-count" id="resetCount">0件</div>
+                    のデータが削除されます
+                </div>
+                <div class="confirm-buttons">
+                    <button class="confirm-cancel" onclick="hideResetConfirm()">キャンセル</button>
+                    <button class="confirm-delete" onclick="resetAllData()">削除する</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
-        function startApp() {
-            // ボタンをクリックしたらメイン画面へ
-            document.body.style.transition = 'opacity 0.5s ease';
-            document.body.style.opacity = '0';
+        // ============================================
+        // スプラッシュ画面の制御
+        // ============================================
+        document.addEventListener('DOMContentLoaded', function() {
+            // 1段階目: COCOMI CORE (2.5秒)
+            setTimeout(function() {
+                const cocomiSplash = document.getElementById('cocomi-splash');
+                const perafcaSplash = document.getElementById('perafca-splash');
+                
+                // PERAFCAを表示
+                perafcaSplash.classList.add('active');
+                
+                // COCOMIをフェードアウト
+                setTimeout(function() {
+                    cocomiSplash.classList.add('fade-out');
+                }, 100);
+                
+                // 2段階目: PERAFCA (2.5秒)
+                setTimeout(function() {
+                    const appSplash = document.getElementById('app-splash');
+                    
+                    // アプリスプラッシュを表示
+                    appSplash.classList.add('active');
+                    
+                    // PERAFCAをフェードアウト
+                    perafcaSplash.classList.add('fade-out');
+                    
+                    // 3段階目: アプリスプラッシュ (1.5秒)
+                    setTimeout(function() {
+                        appSplash.classList.add('fade-out');
+                        
+                        // メインアプリを表示
+                        setTimeout(function() {
+                            document.getElementById('main-app').classList.add('active');
+                            cocomiSplash.style.display = 'none';
+                            perafcaSplash.style.display = 'none';
+                            appSplash.style.display = 'none';
+                        }, 500);
+                    }, 1500);
+                }, 2500);
+            }, 2500);
+        });
+        
+        // ============================================
+        // メインアプリのロジック
+        // ============================================
+        let map;
+        let markers = [];
+        let infoWindow;
+        let locationData = [];
+        
+        // 10色のルート設定
+        const ROUTES = [
+            { id: 0, name: '未設定', color: '#00BCD4', icon: 'https://maps.google.com/mapfiles/ms/icons/ltblue-dot.png' },
+            { id: 1, name: 'ルート1', color: '#F44336', icon: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png' },
+            { id: 2, name: 'ルート2', color: '#4CAF50', icon: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png' },
+            { id: 3, name: 'ルート3', color: '#2196F3', icon: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png' },
+            { id: 4, name: 'ルート4', color: '#FFEB3B', icon: 'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png' },
+            { id: 5, name: 'ルート5', color: '#9C27B0', icon: 'https://maps.google.com/mapfiles/ms/icons/purple-dot.png' },
+            { id: 6, name: 'ルート6', color: '#FF9800', icon: 'https://maps.google.com/mapfiles/ms/icons/orange-dot.png' },
+            { id: 7, name: 'ルート7', color: '#E91E63', icon: 'https://maps.google.com/mapfiles/ms/icons/pink-dot.png' },
+            { id: 8, name: 'ルート8', color: '#9E9E9E', icon: 'https://maps.google.com/mapfiles/ms/icons/grey-dot.png' },
+            { id: 9, name: 'ルート9', color: '#795548', icon: 'https://mt.googleapis.com/vt/icon/name=icons/spotlight/spotlight-poi.png&scale=1' },
+            { id: 10, name: 'ルート10', color: '#607D8B', icon: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png' }
+        ];
+        
+        function initMap() {
+            const chiyoda = { lat: 35.6939, lng: 139.7535 };
             
-            setTimeout(() => {
-                window.location.href = 'app.html';
-            }, 500);
+            map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 12,
+                center: chiyoda,
+            });
+            
+            infoWindow = new google.maps.InfoWindow();
+            initRouteSelect();
+            loadFromStorage();
         }
         
-        // 3秒後に自動で遷移（オプション）
-        // setTimeout(startApp, 3000);
+        function initRouteSelect() {
+            const select = document.getElementById('addRoute');
+            select.innerHTML = ROUTES.map(r => 
+                `<option value="${r.id}">${r.name}</option>`
+            ).join('');
+        }
+        
+        function showAddModal() {
+            document.getElementById('addModal').classList.add('show');
+            document.getElementById('addCompany').focus();
+        }
+        
+        function hideAddModal() {
+            document.getElementById('addModal').classList.remove('show');
+            document.getElementById('addCompany').value = '';
+            document.getElementById('addAddress').value = '';
+            document.getElementById('addPhone').value = '';
+            document.getElementById('addContact').value = '';
+            document.getElementById('addRoute').value = '0';
+            document.getElementById('addNote').value = '';
+        }
+        
+        async function addNewLocation() {
+            const company = document.getElementById('addCompany').value.trim();
+            const address = document.getElementById('addAddress').value.trim();
+            const phone = document.getElementById('addPhone').value.trim();
+            const contact = document.getElementById('addContact').value.trim();
+            const routeId = parseInt(document.getElementById('addRoute').value);
+            const note = document.getElementById('addNote').value.trim();
+            
+            if (!company || !address) {
+                alert('会社名と住所は必須です');
+                return;
+            }
+            
+            const loading = document.getElementById('loading');
+            loading.classList.add('show');
+            document.getElementById('loadingProgress').textContent = '住所を検索中...';
+            
+            try {
+                const geocoder = new google.maps.Geocoder();
+                const position = await geocodeAddress(geocoder, address);
+                
+                if (position) {
+                    const newItem = {
+                        id: 'loc_' + Date.now(),
+                        no: '',
+                        company: company,
+                        displayName: company,
+                        address: address,
+                        phone: phone,
+                        contact: contact,
+                        info: '',
+                        routeId: routeId,
+                        appointmentDate: '',
+                        appointmentTime: '',
+                        note: note,
+                        position: { lat: position.lat(), lng: position.lng() },
+                        count: 1,
+                        floors: []
+                    };
+                    
+                    locationData.push(newItem);
+                    createMarker(newItem);
+                    map.setCenter(newItem.position);
+                    map.setZoom(15);
+                    saveToStorage();
+                    updateLegend();
+                    document.getElementById('countBadge').textContent = `${locationData.length}件`;
+                    hideAddModal();
+                    alert('✅ 追加しました！');
+                } else {
+                    alert('住所が見つかりませんでした。住所を確認してください。');
+                }
+            } catch (error) {
+                alert('住所の変換に失敗しました: ' + error);
+            }
+            
+            loading.classList.remove('show');
+        }
+        
+        function showResetConfirm() {
+            if (locationData.length === 0) {
+                alert('削除するデータがありません');
+                return;
+            }
+            document.getElementById('resetCount').textContent = locationData.length + '件';
+            document.getElementById('resetModal').classList.add('show');
+        }
+        
+        function hideResetConfirm() {
+            document.getElementById('resetModal').classList.remove('show');
+        }
+        
+        function resetAllData() {
+            markers.forEach(m => m.setMap(null));
+            markers = [];
+            locationData = [];
+            localStorage.removeItem('maintenanceMapData');
+            document.getElementById('countBadge').textContent = '0件';
+            document.getElementById('legend').style.display = 'none';
+            hideResetConfirm();
+            alert('✅ データをリセットしました');
+        }
+        
+        function deleteLocation(itemId) {
+            if (!confirm('この場所を削除しますか？')) return;
+            locationData = locationData.filter(d => d.id !== itemId);
+            const markerIndex = markers.findIndex(m => m.itemId === itemId);
+            if (markerIndex >= 0) {
+                markers[markerIndex].setMap(null);
+                markers.splice(markerIndex, 1);
+            }
+            saveToStorage();
+            updateLegend();
+            document.getElementById('countBadge').textContent = `${locationData.length}件`;
+            infoWindow.close();
+            alert('✅ 削除しました');
+        }
+        
+        function handleFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const fileName = file.name.toLowerCase();
+            
+            if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+                    if (jsonData.length > 1) {
+                        parseExcelData(jsonData);
+                    } else {
+                        alert('Excelファイルにデータがありません');
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            } else {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const text = e.target.result;
+                    parseCSV(text);
+                };
+                reader.readAsText(file, 'UTF-8');
+            }
+        }
+        
+        function normalizeAddress(address) {
+            if (!address) return '';
+            return address
+                .replace(/\s+/g, '')
+                .replace(/[０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0))
+                .replace(/[\uFF21-\uFF3A\uFF41-\uFF5A]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0))
+                .replace(/(\d+)階.*$/i, '')
+                .replace(/(\d+)F.*$/i, '')
+                .replace(/(\d+)Ｆ.*$/i, '')
+                .replace(/\d+号室.*$/i, '')
+                .replace(/[A-Za-z]棟.*$/i, '')
+                .trim();
+        }
+        
+        function extractFloorInfo(address) {
+            if (!address) return '';
+            const floorMatch = address.match(/(\d+)[階FＦ]/i);
+            if (floorMatch) return floorMatch[1] + '階';
+            const roomMatch = address.match(/(\d+)号室/);
+            if (roomMatch) return roomMatch[1] + '号室';
+            return '';
+        }
+        
+        function groupByAddress(dataList) {
+            const groups = {};
+            dataList.forEach(item => {
+                const normalizedAddr = normalizeAddress(item.address);
+                if (!groups[normalizedAddr]) {
+                    groups[normalizedAddr] = { ...item, originalAddress: item.address, count: 1, floors: [], allItems: [item] };
+                    const floor = extractFloorInfo(item.address);
+                    if (floor) groups[normalizedAddr].floors.push(floor);
+                } else {
+                    groups[normalizedAddr].count++;
+                    groups[normalizedAddr].allItems.push(item);
+                    const floor = extractFloorInfo(item.address);
+                    if (floor && !groups[normalizedAddr].floors.includes(floor)) {
+                        groups[normalizedAddr].floors.push(floor);
+                    }
+                    if (item.info && !groups[normalizedAddr].info.includes(item.info)) {
+                        groups[normalizedAddr].info = groups[normalizedAddr].info ? groups[normalizedAddr].info + ' / ' + item.info : item.info;
+                    }
+                }
+            });
+            return Object.values(groups).map(group => {
+                let floorNote = group.floors.length > 0 ? '【階数】' + group.floors.join(', ') : '';
+                return {
+                    ...group,
+                    company: group.company,
+                    displayName: group.company + (group.count > 1 ? `（${group.count}台）` : ''),
+                    note: floorNote + (group.info ? '\n' + group.info : ''),
+                    info: group.info
+                };
+            });
+        }
+        
+        function parseExcelData(rows) {
+            const data = [];
+            let headerRowIndex = -1;
+            let columnMap = {};
+            
+            for (let i = 0; i < Math.min(rows.length, 10); i++) {
+                const row = rows[i];
+                if (!row) continue;
+                const rowStr = row.map(cell => String(cell || '')).join(',');
+                if (rowStr.includes('管理NO') || rowStr.includes('管理No')) {
+                    headerRowIndex = i;
+                    row.forEach((cell, index) => {
+                        const cellStr = String(cell || '').trim();
+                        if (cellStr.includes('管理NO') || cellStr.includes('管理No') || cellStr === 'NO') columnMap.no = index;
+                        if (cellStr.includes('設置先会社名') || cellStr === '会社名') columnMap.company = index;
+                        if (cellStr === '都道府県') columnMap.prefecture = index;
+                        if (cellStr === '住所') columnMap.address = index;
+                        if (cellStr.includes('TEL') || cellStr.includes('電話')) columnMap.phone = index;
+                        if (cellStr.includes('担当者')) columnMap.contact = index;
+                        if (cellStr.includes('設置先情報') || cellStr.includes('会社情報') || cellStr.includes('備考')) columnMap.info = index;
+                    });
+                    if (columnMap.company === undefined && columnMap.no !== undefined) columnMap.company = columnMap.no + 2;
+                    if (columnMap.address === undefined && columnMap.prefecture !== undefined) columnMap.address = columnMap.prefecture + 1;
+                    break;
+                }
+            }
+            
+            if (headerRowIndex === -1) {
+                headerRowIndex = 0;
+                columnMap = { no: 0, company: 1, address: 2, phone: 3, contact: 4, info: 5 };
+            }
+            
+            for (let i = headerRowIndex + 1; i < rows.length; i++) {
+                const values = rows[i];
+                if (!values) continue;
+                let company = columnMap.company !== undefined ? String(values[columnMap.company] || '') : '';
+                if ((!company || company === 'undefined' || company === 'NaN' || company === 'null') && columnMap.no !== undefined) {
+                    const possibleCompanyCol = columnMap.no + 2;
+                    if (values[possibleCompanyCol]) company = String(values[possibleCompanyCol] || '');
+                }
+                if (!company || company === 'undefined' || company === 'NaN' || company === 'null') continue;
+                let address = '';
+                if (columnMap.prefecture !== undefined && values[columnMap.prefecture]) address += String(values[columnMap.prefecture] || '');
+                if (columnMap.address !== undefined && values[columnMap.address]) address += String(values[columnMap.address] || '');
+                if (!address) continue;
+                let phone = columnMap.phone !== undefined ? String(values[columnMap.phone] || '') : '';
+                let contact = columnMap.contact !== undefined ? String(values[columnMap.contact] || '') : '';
+                let info = columnMap.info !== undefined ? String(values[columnMap.info] || '') : '';
+                data.push({
+                    id: 'loc_' + Date.now() + '_' + i,
+                    no: columnMap.no !== undefined ? String(values[columnMap.no] || '') : '',
+                    company: company,
+                    address: address,
+                    phone: phone,
+                    contact: contact,
+                    info: (info && info !== 'NaN' && info !== 'undefined') ? info : '',
+                    routeId: 0,
+                    appointmentDate: '',
+                    appointmentTime: '',
+                    note: '',
+                    position: null
+                });
+            }
+            
+            if (data.length > 0) {
+                const groupedData = groupByAddress(data);
+                geocodeAddresses(groupedData);
+            } else {
+                alert('データがありません。ファイル形式を確認してください。');
+            }
+        }
+        
+        function parseCSV(text) {
+            const lines = text.trim().split('\n');
+            const rows = lines.map(line => parseCSVLine(line));
+            parseExcelData(rows);
+        }
+        
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            result.push(current.trim());
+            return result;
+        }
+        
+        async function geocodeAddresses(data) {
+            markers.forEach(m => m.setMap(null));
+            markers = [];
+            locationData = [];
+            
+            const loading = document.getElementById('loading');
+            const progress = document.getElementById('loadingProgress');
+            loading.classList.add('show');
+            
+            const geocoder = new google.maps.Geocoder();
+            const bounds = new google.maps.LatLngBounds();
+            let successCount = 0;
+            
+            for (let i = 0; i < data.length; i++) {
+                const item = data[i];
+                progress.textContent = `${i + 1} / ${data.length}`;
+                try {
+                    const position = await geocodeAddress(geocoder, item.address);
+                    if (position) {
+                        item.position = { lat: position.lat(), lng: position.lng() };
+                        locationData.push(item);
+                        createMarker(item);
+                        bounds.extend(position);
+                        successCount++;
+                    }
+                } catch (error) {
+                    console.warn(`住所変換失敗: ${item.address}`, error);
+                }
+                await sleep(200);
+            }
+            
+            loading.classList.remove('show');
+            document.getElementById('countBadge').textContent = `${successCount}件`;
+            if (successCount > 0) map.fitBounds(bounds);
+            document.getElementById('csvInput').value = '';
+            saveToStorage();
+            updateLegend();
+        }
+        
+        function geocodeAddress(geocoder, address) {
+            return new Promise((resolve, reject) => {
+                geocoder.geocode({ address: address }, (results, status) => {
+                    if (status === 'OK' && results[0]) {
+                        resolve(results[0].geometry.location);
+                    } else {
+                        reject(status);
+                    }
+                });
+            });
+        }
+        
+        function createMarker(item) {
+            const route = ROUTES[item.routeId] || ROUTES[0];
+            const displayName = item.displayName || item.company;
+            const marker = new google.maps.Marker({
+                position: item.position,
+                map: map,
+                title: displayName,
+                label: { text: displayName, className: 'marker-label', fontSize: '11px', fontWeight: 'bold' },
+                icon: { url: route.icon, labelOrigin: new google.maps.Point(15, -10) }
+            });
+            marker.itemId = item.id;
+            marker.addListener('click', () => showInfoWindow(item, marker));
+            markers.push(marker);
+        }
+        
+        function showInfoWindow(item, marker) {
+            const route = ROUTES[item.routeId] || ROUTES[0];
+            const displayName = item.displayName || item.company;
+            const countDisplay = item.count > 1 ? `<div style="background: #e3f2fd; padding: 4px 8px; border-radius: 4px; margin-bottom: 8px; font-size: 13px;">📦 <strong>${item.count}台</strong> 設置</div>` : '';
+            const floorDisplay = (item.floors && item.floors.length > 0) ? `<div class="info-row"><span class="info-label">🏢 設置階：</span>${item.floors.join(', ')}</div>` : '';
+            let routeOptions = ROUTES.map(r => `<option value="${r.id}" ${item.routeId === r.id ? 'selected' : ''}>${r.name}</option>`).join('');
+            
+            const content = `
+                <div class="info-form">
+                    <h3>${displayName}</h3>
+                    ${countDisplay}
+                    <div class="info-row"><span class="info-label">📍 住所：</span><br>${item.address}</div>
+                    ${floorDisplay}
+                    <div class="info-row"><span class="info-label">👤 担当者：</span>${item.contact || '未登録'}</div>
+                    <div class="info-row"><span class="info-label">📞 電話：</span><a href="tel:${item.phone}" style="color: #4285f4;">${item.phone || '未登録'}</a></div>
+                    ${item.info ? `<div class="info-row"><span class="info-label">📝 会社情報：</span><br>${item.info}</div>` : ''}
+                    <hr style="margin: 12px 0; border: none; border-top: 1px solid #eee;">
+                    <div class="info-row">
+                        <span class="info-label">🎨 ルート：</span>
+                        <div class="route-select">
+                            <select id="route_${item.id}" onchange="updateColorPreview('${item.id}')">${routeOptions}</select>
+                            <div class="color-preview" id="colorPreview_${item.id}" style="background: ${route.color};"></div>
+                        </div>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">📅 アポ日時：</span>
+                        <input type="date" id="date_${item.id}" value="${item.appointmentDate}">
+                        <input type="time" id="time_${item.id}" value="${item.appointmentTime}" style="margin-top: 4px;">
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">⚠️ 注意事項：</span>
+                        <textarea id="note_${item.id}" placeholder="駐車場情報など...">${item.note || ''}</textarea>
+                    </div>
+                    <button class="save-btn" onclick="saveAppointment('${item.id}')">💾 保存する</button>
+                    <button class="delete-btn" onclick="deleteLocation('${item.id}')">🗑️ この場所を削除</button>
+                </div>
+            `;
+            infoWindow.setContent(content);
+            infoWindow.open(map, marker);
+        }
+        
+        function updateColorPreview(itemId) {
+            const select = document.getElementById(`route_${itemId}`);
+            const preview = document.getElementById(`colorPreview_${itemId}`);
+            const routeId = parseInt(select.value);
+            preview.style.background = ROUTES[routeId].color;
+        }
+        
+        function saveAppointment(itemId) {
+            const item = locationData.find(d => d.id === itemId);
+            if (!item) return;
+            item.routeId = parseInt(document.getElementById(`route_${itemId}`).value);
+            item.appointmentDate = document.getElementById(`date_${itemId}`).value;
+            item.appointmentTime = document.getElementById(`time_${itemId}`).value;
+            item.note = document.getElementById(`note_${itemId}`).value;
+            const markerIndex = markers.findIndex(m => m.itemId === itemId);
+            if (markerIndex >= 0) {
+                markers[markerIndex].setMap(null);
+                markers.splice(markerIndex, 1);
+                createMarker(item);
+            }
+            saveToStorage();
+            updateLegend();
+            infoWindow.close();
+            alert('✅ 保存しました！');
+        }
+        
+        function updateLegend() {
+            const legend = document.getElementById('legend');
+            const legendItems = document.getElementById('legendItems');
+            const routeCounts = {};
+            locationData.forEach(item => { routeCounts[item.routeId] = (routeCounts[item.routeId] || 0) + 1; });
+            if (Object.keys(routeCounts).length === 0) { legend.style.display = 'none'; return; }
+            legend.style.display = 'block';
+            let html = '';
+            ROUTES.forEach(route => {
+                const count = routeCounts[route.id] || 0;
+                if (count > 0) {
+                    html += `<div class="legend-item"><div class="legend-color" style="background: ${route.color};"></div><span>${route.name}（${count}件）</span></div>`;
+                }
+            });
+            legendItems.innerHTML = html;
+        }
+        
+        function saveToStorage() { localStorage.setItem('maintenanceMapData', JSON.stringify(locationData)); }
+        
+        function loadFromStorage() {
+            const saved = localStorage.getItem('maintenanceMapData');
+            if (saved) {
+                try {
+                    locationData = JSON.parse(saved);
+                    const bounds = new google.maps.LatLngBounds();
+                    locationData.forEach(item => {
+                        if (item.position) {
+                            createMarker(item);
+                            bounds.extend(item.position);
+                        }
+                    });
+                    if (locationData.length > 0) {
+                        map.fitBounds(bounds);
+                        document.getElementById('countBadge').textContent = `${locationData.length}件`;
+                    }
+                    updateLegend();
+                } catch (e) { console.error('データ復元エラー:', e); }
+            }
+        }
+        
+        function exportPDF() {
+            if (locationData.length === 0) { alert('データがありません。CSVを読み込んでください。'); return; }
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('l', 'mm', 'a4');
+            doc.setFont('helvetica');
+            doc.setFontSize(18);
+            doc.text('Maintenance Map - Appointment List', 14, 15);
+            doc.setFontSize(10);
+            const today = new Date().toLocaleDateString('ja-JP');
+            doc.text(`Output: ${today}`, 14, 22);
+            const tableData = locationData.map(item => {
+                const route = ROUTES[item.routeId] || ROUTES[0];
+                const dateTime = item.appointmentDate ? `${item.appointmentDate} ${item.appointmentTime || ''}`.trim() : '';
+                const countStr = item.count > 1 ? `${item.count}台` : '1台';
+                const floorStr = (item.floors && item.floors.length > 0) ? item.floors.join(', ') : '';
+                return [item.no, item.company, countStr, item.address, floorStr, item.phone, item.contact, route.name, dateTime, item.note || ''];
+            });
+            tableData.sort((a, b) => ROUTES.findIndex(r => r.name === a[7]) - ROUTES.findIndex(r => r.name === b[7]));
+            doc.autoTable({
+                head: [['No', 'Company', 'Count', 'Address', 'Floor', 'Phone', 'Contact', 'Route', 'Appointment', 'Note']],
+                body: tableData,
+                startY: 28,
+                styles: { fontSize: 7, cellPadding: 2 },
+                headStyles: { fillColor: [66, 133, 244], textColor: 255, fontStyle: 'bold' },
+                columnStyles: { 0: { cellWidth: 10 }, 1: { cellWidth: 30 }, 2: { cellWidth: 12 }, 3: { cellWidth: 45 }, 4: { cellWidth: 20 }, 5: { cellWidth: 22 }, 6: { cellWidth: 18 }, 7: { cellWidth: 16 }, 8: { cellWidth: 25 }, 9: { cellWidth: 30 } },
+                didParseCell: function(data) {
+                    if (data.column.index === 7 && data.section === 'body') {
+                        const route = ROUTES.find(r => r.name === data.cell.raw);
+                        if (route && route.id !== 0) {
+                            const hex = route.color.replace('#', '');
+                            const r = parseInt(hex.substr(0, 2), 16), g = parseInt(hex.substr(2, 2), 16), b = parseInt(hex.substr(4, 2), 16);
+                            data.cell.styles.fillColor = [r, g, b];
+                            data.cell.styles.textColor = (r * 299 + g * 587 + b * 114) / 1000 > 128 ? [0, 0, 0] : [255, 255, 255];
+                        }
+                    }
+                }
+            });
+            doc.save(`maintenance_map_${today.replace(/\//g, '-')}.pdf`);
+        }
+        
+        function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+    </script>
+
+    <!-- Google Maps API -->
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY_HERE&callback=initMap"></script>
+    
+    <!-- Service Worker登録 -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('sw.js')
+                    .then(function(registration) {
+                        console.log('ServiceWorker登録成功:', registration.scope);
+                    })
+                    .catch(function(error) {
+                        console.log('ServiceWorker登録失敗:', error);
+                    });
+            });
+        }
     </script>
 </body>
 </html>
