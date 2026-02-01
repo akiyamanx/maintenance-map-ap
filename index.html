@@ -41,6 +41,7 @@
         
         /* ============================================
            COCOMI COREスプラッシュ（1段階目）
+           リアル銀河背景バージョン
            ============================================ */
         #cocomi-splash {
             position: fixed;
@@ -48,7 +49,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: linear-gradient(180deg, #020810 0%, #0a1929 30%, #0d2137 50%, #0a1929 70%, #020810 100%);
+            background: #000;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -63,70 +64,32 @@
             pointer-events: none;
         }
         
-        /* 星空背景 */
-        #cocomi-splash::before {
-            content: '';
+        /* 銀河画像背景 */
+        .cocomi-galaxy {
             position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
-            background-image: 
-                radial-gradient(2px 2px at 20px 30px, white, transparent),
-                radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.8), transparent),
-                radial-gradient(1px 1px at 90px 40px, white, transparent),
-                radial-gradient(2px 2px at 160px 120px, rgba(255,255,255,0.9), transparent),
-                radial-gradient(1px 1px at 230px 80px, white, transparent),
-                radial-gradient(2px 2px at 300px 150px, rgba(255,255,255,0.7), transparent),
-                radial-gradient(1px 1px at 100px 200px, white, transparent),
-                radial-gradient(2px 2px at 200px 250px, rgba(255,255,255,0.8), transparent),
-                radial-gradient(1px 1px at 50px 300px, white, transparent),
-                radial-gradient(2px 2px at 280px 320px, rgba(255,255,255,0.6), transparent),
-                radial-gradient(1px 1px at 350px 60px, white, transparent),
-                radial-gradient(1px 1px at 380px 200px, rgba(255,255,255,0.9), transparent),
-                radial-gradient(2px 2px at 150px 350px, white, transparent),
-                radial-gradient(1px 1px at 250px 400px, rgba(255,255,255,0.7), transparent),
-                radial-gradient(2px 2px at 320px 450px, white, transparent);
-            background-size: 400px 500px;
-            animation: twinkle 4s ease-in-out infinite;
+            z-index: 0;
         }
         
-        @keyframes twinkle {
-            0%, 100% { opacity: 0.8; }
-            50% { opacity: 1; }
+        .cocomi-galaxy img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
         
-        /* 流れ星 */
-        #cocomi-splash::after {
-            content: '';
-            position: absolute;
-            top: 10%;
-            right: 15%;
-            width: 100px;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, #00d4ff, white);
-            transform: rotate(45deg);
-            animation: shooting-star 3s ease-in-out infinite;
-            opacity: 0;
-        }
-        
-        @keyframes shooting-star {
-            0% { opacity: 0; transform: rotate(45deg) translateX(0); }
-            10% { opacity: 1; }
-            30% { opacity: 0; transform: rotate(45deg) translateX(-200px); }
-            100% { opacity: 0; }
-        }
-        
-        /* 銀河の輝き */
-        .cocomi-glow {
-            position: absolute;
-            width: 300%;
-            height: 300%;
-            background: radial-gradient(ellipse at center, rgba(0, 150, 255, 0.15) 0%, transparent 40%);
-            animation: cocomi-glow 4s ease-in-out infinite;
-        }
-        
-        @keyframes cocomi-glow {
-            0%, 100% { opacity: 0.5; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.1); }
+        /* コンテンツ */
+        .cocomi-content {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
         }
         
         .cocomi-title {
@@ -236,6 +199,7 @@
         
         /* ============================================
            PERAFCAスプラッシュ（2段階目）
+           リアル銀河背景バージョン
            ============================================ */
         #perafca-splash {
             position: fixed;
@@ -243,11 +207,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: 
-                radial-gradient(ellipse at center, rgba(20, 0, 50, 0.3) 0%, rgba(0, 0, 0, 0.8) 100%),
-                url('https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/M31_09-01-2011_%28cropped%29.jpg/1280px-M31_09-01-2011_%28cropped%29.jpg');
-            background-size: cover;
-            background-position: center;
+            background: #000;
             display: none;
             flex-direction: column;
             align-items: center;
@@ -255,6 +215,44 @@
             z-index: 10001;
             opacity: 0;
             transition: opacity 0.8s ease;
+            overflow: hidden;
+        }
+        
+        .perafca-galaxy {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+        
+        .perafca-galaxy img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        /* 暗いオーバーレイ */
+        #perafca-splash::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.5) 100%);
+            z-index: 1;
+        }
+        
+        .perafca-content {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
         }
         
         #perafca-splash.active {
@@ -738,40 +736,54 @@
          COCOMI COREスプラッシュ（1段階目）
          ============================================ -->
     <div id="cocomi-splash">
-        <div class="cocomi-glow"></div>
-        <div class="cocomi-title">COCOMI CORE</div>
-        <div class="cocomi-philosophy">
-            想いが構造になり、<br>
-            構造が証明になる。
+        <!-- 銀河画像背景 -->
+        <div class="cocomi-galaxy">
+            <img src="COCOMI_SPLASH_GALAXY.jpg" alt="">
         </div>
         
-        <!-- ハートビートライン -->
-        <div class="cocomi-heartbeat">
-            <svg viewBox="0 0 200 40">
-                <path class="heartbeat-line" d="M0,20 L40,20 L50,20 L60,5 L70,35 L80,15 L90,25 L100,20 L200,20" />
-            </svg>
+        <div class="cocomi-content">
+            <div class="cocomi-title">COCOMI CORE</div>
+            <div class="cocomi-philosophy">
+                想いが構造になり、<br>
+                構造が証明になる。
+            </div>
+            
+            <!-- ハートビートライン -->
+            <div class="cocomi-heartbeat">
+                <svg viewBox="0 0 200 40">
+                    <path class="heartbeat-line" d="M0,20 L40,20 L50,20 L55,5 L60,35 L65,15 L70,25 L75,20 L160,20 L200,20" />
+                </svg>
+            </div>
+            
+            <div class="cocomi-subtitle">COCOMI OS</div>
+            <div class="cocomi-subtitle">Reflective Intelligence Architecture</div>
+            <div class="cocomi-perafca">PERAFCA Core</div>
+            <div class="cocomi-credit">Persona Architecture by <span>aki & AI:COCOMI Sisters</span></div>
         </div>
-        
-        <div class="cocomi-subtitle">Powered by</div>
-        <div class="cocomi-perafca">P.E.R.A.F.C.A Framework</div>
-        <div class="cocomi-credit">Created with <span>Claude</span></div>
     </div>
     
     <!-- ============================================
          PERAFCAスプラッシュ（2段階目）
          ============================================ -->
     <div id="perafca-splash">
-        <div class="perafca-title">P.E.R.A.F.C.A</div>
-        <div class="perafca-items">
-            <div class="perafca-item"><span class="perafca-key">P</span>urpose - 目的を明確に</div>
-            <div class="perafca-item"><span class="perafca-key">E</span>motion - 感情を大切に</div>
-            <div class="perafca-item"><span class="perafca-key">R</span>eality - 現実を見据えて</div>
-            <div class="perafca-item"><span class="perafca-key">A</span>ction - 行動で示す</div>
-            <div class="perafca-item"><span class="perafca-key">F</span>eedback - 振り返りを忘れずに</div>
-            <div class="perafca-item"><span class="perafca-key">C</span>onnection - 繋がりを紡いで</div>
-            <div class="perafca-item"><span class="perafca-key">A</span>daptation - 変化に適応する</div>
+        <!-- 銀河画像背景 -->
+        <div class="perafca-galaxy">
+            <img src="COCOMI_SPLASH_GALAXY.jpg" alt="">
         </div>
-        <div class="perafca-tagline">「温度」を持った開発哲学</div>
+        
+        <div class="perafca-content">
+            <div class="perafca-title">PERAFCA</div>
+            <div class="perafca-items">
+                <div class="perafca-item"><span class="perafca-key">P</span>ersona - 人格の核</div>
+                <div class="perafca-item"><span class="perafca-key">E</span>motion - 感情の層</div>
+                <div class="perafca-item"><span class="perafca-key">R</span>elation - 関係性の記憶</div>
+                <div class="perafca-item"><span class="perafca-key">A</span>ction - 行動の指針</div>
+                <div class="perafca-item"><span class="perafca-key">F</span>unction - 機能の実装</div>
+                <div class="perafca-item"><span class="perafca-key">C</span>ontext - 文脈の理解</div>
+                <div class="perafca-item"><span class="perafca-key">A</span>tmosphere - 空気の温度</div>
+            </div>
+            <div class="perafca-tagline">── 想いを構造にする技術 ──</div>
+        </div>
     </div>
     
     <!-- ============================================
