@@ -23,8 +23,6 @@
     <!-- PDF出力用ライブラリ -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-    <!-- 日本語フォント -->
-    <script src="noto-font.js"></script>
     <!-- Excel読み込み用ライブラリ -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
@@ -43,7 +41,6 @@
         
         /* ============================================
            COCOMI COREスプラッシュ（1段階目）
-           リアル銀河背景バージョン
            ============================================ */
         #cocomi-splash {
             position: fixed;
@@ -51,7 +48,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: #000;
+            background: linear-gradient(180deg, #020810 0%, #0a1929 30%, #0d2137 50%, #0a1929 70%, #020810 100%);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -66,50 +63,76 @@
             pointer-events: none;
         }
         
-        /* 暗いオーバーレイ（1枚目にも追加） */
+        /* 星空背景 */
         #cocomi-splash::before {
             content: '';
             position: absolute;
-            top: 0;
-            left: 0;
             width: 100%;
             height: 100%;
-            background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.5) 100%);
-            z-index: 1;
+            background-image: 
+                radial-gradient(2px 2px at 20px 30px, white, transparent),
+                radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.8), transparent),
+                radial-gradient(1px 1px at 90px 40px, white, transparent),
+                radial-gradient(2px 2px at 160px 120px, rgba(255,255,255,0.9), transparent),
+                radial-gradient(1px 1px at 230px 80px, white, transparent),
+                radial-gradient(2px 2px at 300px 150px, rgba(255,255,255,0.7), transparent),
+                radial-gradient(1px 1px at 100px 200px, white, transparent),
+                radial-gradient(2px 2px at 200px 250px, rgba(255,255,255,0.8), transparent),
+                radial-gradient(1px 1px at 50px 300px, white, transparent),
+                radial-gradient(2px 2px at 280px 320px, rgba(255,255,255,0.6), transparent),
+                radial-gradient(1px 1px at 350px 60px, white, transparent),
+                radial-gradient(1px 1px at 380px 200px, rgba(255,255,255,0.9), transparent),
+                radial-gradient(2px 2px at 150px 350px, white, transparent),
+                radial-gradient(1px 1px at 250px 400px, rgba(255,255,255,0.7), transparent),
+                radial-gradient(2px 2px at 320px 450px, white, transparent);
+            background-size: 400px 500px;
+            animation: twinkle 4s ease-in-out infinite;
         }
         
-        /* 銀河画像背景 */
-        .cocomi-galaxy {
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 1; }
+        }
+        
+        /* 流れ星 */
+        #cocomi-splash::after {
+            content: '';
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 0;
+            top: 10%;
+            right: 15%;
+            width: 100px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00d4ff, white);
+            transform: rotate(45deg);
+            animation: shooting-star 3s ease-in-out infinite;
+            opacity: 0;
         }
         
-        .cocomi-galaxy img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
+        @keyframes shooting-star {
+            0% { opacity: 0; transform: rotate(45deg) translateX(0); }
+            10% { opacity: 1; }
+            30% { opacity: 0; transform: rotate(45deg) translateX(-200px); }
+            100% { opacity: 0; }
         }
         
-        /* コンテンツ */
-        .cocomi-content {
-            position: relative;
-            z-index: 2;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            padding: 20px;
+        /* 銀河の輝き */
+        .cocomi-glow {
+            position: absolute;
+            width: 300%;
+            height: 300%;
+            background: radial-gradient(ellipse at center, rgba(0, 150, 255, 0.15) 0%, transparent 40%);
+            animation: cocomi-glow 4s ease-in-out infinite;
+        }
+        
+        @keyframes cocomi-glow {
+            0%, 100% { opacity: 0.5; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.1); }
         }
         
         .cocomi-title {
-            font-size: 36px;
+            font-size: 28px;
             font-weight: 300;
-            letter-spacing: 12px;
+            letter-spacing: 10px;
             color: #ffffff;
             text-shadow: 
                 0 0 5px #00d4ff,
@@ -118,7 +141,8 @@
                 0 0 40px #00d4ff,
                 0 0 60px #00d4ff,
                 0 0 80px rgba(0, 212, 255, 0.8);
-            margin-bottom: 36px;
+            margin-bottom: 20px;
+            z-index: 1;
             animation: text-glow 2s ease-in-out infinite;
         }
         
@@ -144,18 +168,20 @@
         }
         
         .cocomi-philosophy {
-            font-size: 18px;
+            font-size: 15px;
             color: rgba(255,255,255,0.95);
             text-align: center;
-            line-height: 2.4;
-            margin-bottom: 40px;
+            line-height: 2;
+            margin-bottom: 24px;
+            z-index: 1;
             text-shadow: 0 0 10px rgba(255,255,255,0.3);
         }
         
         .cocomi-heartbeat {
-            width: 240px;
-            height: 50px;
-            margin-bottom: 40px;
+            width: 200px;
+            height: 40px;
+            z-index: 1;
+            margin-bottom: 24px;
         }
         
         .cocomi-heartbeat svg {
@@ -181,26 +207,26 @@
         }
         
         .cocomi-subtitle {
-            font-size: 13px;
+            font-size: 11px;
             color: rgba(255,255,255,0.8);
-            letter-spacing: 3px;
-            margin-bottom: 8px;
+            letter-spacing: 2px;
+            margin-bottom: 4px;
+            z-index: 1;
         }
         
         .cocomi-perafca {
-            font-size: 12px;
+            font-size: 10px;
             color: rgba(0, 212, 255, 0.9);
-            letter-spacing: 2px;
-            margin-bottom: 24px;
+            letter-spacing: 1px;
+            margin-bottom: 16px;
+            z-index: 1;
             text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
         }
         
         .cocomi-credit {
-            font-size: 14px;
+            font-size: 12px;
             color: rgba(255,255,255,0.7);
-            display: flex;
-            align-items: center;
-            gap: 6px;
+            z-index: 1;
         }
         
         .cocomi-credit span {
@@ -208,27 +234,8 @@
             text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
         }
         
-        /* 小さいピンクハート */
-        .mini-heart {
-            width: 14px;
-            height: 14px;
-            display: inline-block;
-            vertical-align: middle;
-            filter: drop-shadow(0 0 4px #ff69b4)
-                    drop-shadow(0 0 8px rgba(255, 105, 180, 0.6));
-        }
-        
-        .mini-heart path {
-            fill: none;
-            stroke: #ff69b4;
-            stroke-width: 2;
-            stroke-linecap: round;
-            stroke-linejoin: round;
-        }
-        
         /* ============================================
            PERAFCAスプラッシュ（2段階目）
-           リアル銀河背景バージョン
            ============================================ */
         #perafca-splash {
             position: fixed;
@@ -236,7 +243,11 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: #000;
+            background: 
+                radial-gradient(ellipse at center, rgba(20, 0, 50, 0.3) 0%, rgba(0, 0, 0, 0.8) 100%),
+                url('https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/M31_09-01-2011_%28cropped%29.jpg/1280px-M31_09-01-2011_%28cropped%29.jpg');
+            background-size: cover;
+            background-position: center;
             display: none;
             flex-direction: column;
             align-items: center;
@@ -244,44 +255,6 @@
             z-index: 10001;
             opacity: 0;
             transition: opacity 0.8s ease;
-            overflow: hidden;
-        }
-        
-        .perafca-galaxy {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 0;
-        }
-        
-        .perafca-galaxy img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        
-        /* 暗いオーバーレイ */
-        #perafca-splash::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.5) 100%);
-            z-index: 1;
-        }
-        
-        .perafca-content {
-            position: relative;
-            z-index: 2;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
         }
         
         #perafca-splash.active {
@@ -294,11 +267,11 @@
         }
         
         .perafca-title {
-            font-size: 36px;
+            font-size: 28px;
             font-weight: bold;
             color: #00d4ff;
-            letter-spacing: 6px;
-            margin-bottom: 50px;
+            letter-spacing: 4px;
+            margin-bottom: 30px;
             text-shadow: 
                 0 0 20px rgba(0, 212, 255, 0.8),
                 0 0 40px rgba(0, 212, 255, 0.5),
@@ -313,13 +286,13 @@
         
         .perafca-items {
             text-align: left;
-            margin-bottom: 40px;
+            margin-bottom: 24px;
         }
         
         .perafca-item {
-            font-size: 17px;
+            font-size: 14px;
             color: rgba(255, 255, 255, 0.9);
-            margin-bottom: 20px;
+            margin-bottom: 12px;
             letter-spacing: 1px;
             text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
         }
@@ -331,33 +304,11 @@
         }
         
         .perafca-tagline {
-            font-size: 20px;
+            font-size: 16px;
             color: #00d4ff;
-            margin-top: 16px;
-            letter-spacing: 3px;
+            margin-top: 10px;
+            letter-spacing: 2px;
             text-shadow: 0 0 15px rgba(0, 212, 255, 0.6);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        
-        /* タグライン用ハート */
-        .tagline-heart {
-            width: 20px;
-            height: 20px;
-            display: inline-block;
-            vertical-align: middle;
-            filter: drop-shadow(0 0 4px #ff69b4)
-                    drop-shadow(0 0 8px rgba(255, 105, 180, 0.6))
-                    drop-shadow(0 0 12px rgba(255, 105, 180, 0.4));
-        }
-        
-        .tagline-heart path {
-            fill: none;
-            stroke: #ff69b4;
-            stroke-width: 2;
-            stroke-linecap: round;
-            stroke-linejoin: round;
         }
         
         /* ============================================
@@ -741,139 +692,6 @@
             background: #3367d6;
         }
         
-        /* ============================================
-           リスト表示モーダル
-           ============================================ */
-        .list-modal {
-            width: 95%;
-            max-width: 900px;
-            max-height: 90vh;
-            display: flex;
-            flex-direction: column;
-        }
-        .list-modal h2 {
-            margin: 0 0 12px 0;
-            color: #333;
-            font-size: 18px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-shrink: 0;
-        }
-        .list-info {
-            font-size: 13px;
-            color: #666;
-            margin-bottom: 12px;
-            flex-shrink: 0;
-        }
-        .list-container {
-            flex: 1;
-            overflow-y: auto;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            background: #fff;
-        }
-        .list-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 13px;
-        }
-        .list-table th {
-            background: #4285f4;
-            color: white;
-            padding: 10px 8px;
-            text-align: left;
-            font-weight: bold;
-            position: sticky;
-            top: 0;
-            z-index: 1;
-            white-space: nowrap;
-        }
-        .list-table td {
-            padding: 10px 8px;
-            border-bottom: 1px solid #eee;
-            vertical-align: top;
-        }
-        .list-table tbody tr {
-            cursor: pointer;
-            transition: background 0.15s;
-        }
-        .list-table tr:hover {
-            background: #e3f2fd;
-        }
-        .list-table tr:active {
-            background: #bbdefb;
-        }
-        .list-table tr:nth-child(even) {
-            background: #fafafa;
-        }
-        .list-table tr:nth-child(even):hover {
-            background: #e3f2fd;
-        }
-        .list-table tr:nth-child(even):active {
-            background: #bbdefb;
-        }
-        .list-table .col-no {
-            width: 50px;
-            text-align: center;
-            color: #666;
-        }
-        .list-table .col-company {
-            min-width: 120px;
-            font-weight: bold;
-            color: #333;
-        }
-        .list-table .col-address {
-            min-width: 180px;
-            color: #555;
-        }
-        .list-table .col-phone {
-            min-width: 100px;
-            white-space: nowrap;
-        }
-        .list-table .col-contact {
-            min-width: 80px;
-        }
-        .list-table .col-route {
-            width: 60px;
-            text-align: center;
-        }
-        .route-badge-small {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 10px;
-            font-size: 11px;
-            font-weight: bold;
-            color: white;
-        }
-        .list-close-btn {
-            margin-top: 12px;
-            padding: 12px 24px;
-            background: #4285f4;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: bold;
-            cursor: pointer;
-            flex-shrink: 0;
-        }
-        .list-close-btn:hover {
-            background: #3367d6;
-        }
-        .btn-list {
-            background: #9c27b0;
-        }
-        .btn-list:hover {
-            background: #7b1fa2;
-        }
-        .list-empty {
-            text-align: center;
-            padding: 40px 20px;
-            color: #999;
-            font-size: 15px;
-        }
-        
         /* 確認ダイアログ */
         .confirm-buttons {
             display: flex;
@@ -920,59 +738,40 @@
          COCOMI COREスプラッシュ（1段階目）
          ============================================ -->
     <div id="cocomi-splash">
-        <!-- 銀河画像背景 -->
-        <div class="cocomi-galaxy">
-            <img src="COCOMI_SPLASH_GALAXY.jpg" alt="">
+        <div class="cocomi-glow"></div>
+        <div class="cocomi-title">COCOMI CORE</div>
+        <div class="cocomi-philosophy">
+            想いが構造になり、<br>
+            構造が証明になる。
         </div>
         
-        <div class="cocomi-content">
-            <div class="cocomi-title">COCOMI CORE</div>
-            <div class="cocomi-philosophy">
-                想いが構造になり、<br>
-                構造が証明になる。
-            </div>
-            
-            <!-- ハートビートライン -->
-            <div class="cocomi-heartbeat">
-                <svg viewBox="0 0 200 40">
-                    <path class="heartbeat-line" d="M0,20 L40,20 L50,20 L55,5 L60,35 L65,15 L70,25 L75,20 L160,20 L200,20" />
-                </svg>
-            </div>
-            
-            <div class="cocomi-subtitle">COCOMI OS</div>
-            <div class="cocomi-subtitle">Reflective Intelligence Architecture</div>
-            <div class="cocomi-perafca">PERAFCA Core</div>
-            <div class="cocomi-credit">
-                Persona Architecture by <span>aki & AI:COCOMI Sisters</span>
-                <svg class="mini-heart" viewBox="0 0 24 24">
-                    <path d="M12,21 C12,21 4,14 4,9 C4,5.5 7,3 10,4.5 C11,5 12,6 12,6 C12,6 13,5 14,4.5 C17,3 20,5.5 20,9 C20,14 12,21 12,21 Z" />
-                </svg>
-            </div>
+        <!-- ハートビートライン -->
+        <div class="cocomi-heartbeat">
+            <svg viewBox="0 0 200 40">
+                <path class="heartbeat-line" d="M0,20 L40,20 L50,20 L60,5 L70,35 L80,15 L90,25 L100,20 L200,20" />
+            </svg>
         </div>
+        
+        <div class="cocomi-subtitle">Powered by</div>
+        <div class="cocomi-perafca">P.E.R.A.F.C.A Framework</div>
+        <div class="cocomi-credit">Created with <span>Claude</span></div>
     </div>
     
     <!-- ============================================
          PERAFCAスプラッシュ（2段階目）
          ============================================ -->
     <div id="perafca-splash">
-        <!-- 銀河画像背景 -->
-        <div class="perafca-galaxy">
-            <img src="COCOMI_SPLASH_GALAXY.jpg" alt="">
+        <div class="perafca-title">P.E.R.A.F.C.A</div>
+        <div class="perafca-items">
+            <div class="perafca-item"><span class="perafca-key">P</span>urpose - 目的を明確に</div>
+            <div class="perafca-item"><span class="perafca-key">E</span>motion - 感情を大切に</div>
+            <div class="perafca-item"><span class="perafca-key">R</span>eality - 現実を見据えて</div>
+            <div class="perafca-item"><span class="perafca-key">A</span>ction - 行動で示す</div>
+            <div class="perafca-item"><span class="perafca-key">F</span>eedback - 振り返りを忘れずに</div>
+            <div class="perafca-item"><span class="perafca-key">C</span>onnection - 繋がりを紡いで</div>
+            <div class="perafca-item"><span class="perafca-key">A</span>daptation - 変化に適応する</div>
         </div>
-        
-        <div class="perafca-content">
-            <div class="perafca-title">PERAFCA Core</div>
-            <div class="perafca-items">
-                <div class="perafca-item"><span class="perafca-key">P.E.</span> ─ Prompt Engineering（プロンプト設計）</div>
-                <div class="perafca-item"><span class="perafca-key">R</span> ─ Retrieval Augmented（情報活用）</div>
-                <div class="perafca-item"><span class="perafca-key">A.F.</span> ─ Agent Framework（自律行動循環）</div>
-                <div class="perafca-item"><span class="perafca-key">C.A.</span> ─ Cognitive Architecture（認知アーキテクチャ）</div>
-            </div>
-            <div class="perafca-tagline">
-                <svg class="tagline-heart" viewBox="0 0 24 24"><path d="M12,21 C12,21 4,14 4,9 C4,5.5 7,3 10,4.5 C11,5 12,6 12,6 C12,6 13,5 14,4.5 C17,3 20,5.5 20,9 C20,14 12,21 12,21 Z" /></svg>
-                心が異界を紡ぐ仕組み
-            </div>
-        </div>
+        <div class="perafca-tagline">「温度」を持った開発哲学</div>
     </div>
     
     <!-- ============================================
@@ -997,17 +796,8 @@
             <button class="btn btn-add" onclick="showAddModal()">
                 ➕ 追加
             </button>
-            <button class="btn btn-list" onclick="showListModal()">
-                📋 リスト
-            </button>
             <button class="btn btn-pdf" onclick="exportPDF()">
                 📄 PDF
-            </button>
-            <button class="btn" style="background:#4caf50;" onclick="exportBackup()">
-                💾 保存
-            </button>
-            <button class="btn" style="background:#ff9800;" onclick="document.getElementById('jsonInput').click()">
-                📂 復元
             </button>
             <button class="btn btn-reset" onclick="showResetConfirm()">
                 🗑️ リセット
@@ -1019,7 +809,6 @@
         </div>
         
         <input type="file" id="csvInput" accept=".csv,.xlsx,.xls" onchange="handleFile(event)">
-        <input type="file" id="jsonInput" accept=".json" onchange="importBackup(event)" style="display:none;">
         
         <div id="map"></div>
         
@@ -1055,27 +844,6 @@
                     <input type="text" id="addContact" placeholder="例：山田様">
                 </div>
                 <div class="modal-row">
-                    <label>機種名</label>
-                    <select id="addModel">
-                        <option value="">-- 選択してください --</option>
-                        <option value="マーフィード">マーフィード</option>
-                        <option value="ハイパーウォーター">ハイパーウォーター</option>
-                        <option value="アクイズ">アクイズ</option>
-                        <option value="その他">その他</option>
-                    </select>
-                </div>
-                <div class="modal-row">
-                    <label>追加理由</label>
-                    <select id="addReason">
-                        <option value="">-- 選択してください --</option>
-                        <option value="定期メンテナンス">定期メンテナンス</option>
-                        <option value="不定期メンテナンス">不定期メンテナンス</option>
-                        <option value="修理">修理</option>
-                        <option value="新規設置">新規設置</option>
-                        <option value="その他">その他</option>
-                    </select>
-                </div>
-                <div class="modal-row">
                     <label>ルート</label>
                     <select id="addRoute"></select>
                 </div>
@@ -1104,31 +872,6 @@
                     <button class="confirm-cancel" onclick="hideResetConfirm()">キャンセル</button>
                     <button class="confirm-delete" onclick="resetAllData()">削除する</button>
                 </div>
-            </div>
-        </div>
-        
-        <!-- リスト表示モーダル -->
-        <div class="modal-overlay" id="listModal">
-            <div class="modal list-modal">
-                <h2>📋 メンテナンスリスト</h2>
-                <div class="list-info" id="listInfo">全 0 件</div>
-                <div class="list-container">
-                    <table class="list-table">
-                        <thead>
-                            <tr>
-                                <th class="col-no">No</th>
-                                <th class="col-company">会社名</th>
-                                <th class="col-address">住所</th>
-                                <th class="col-phone">電話番号</th>
-                                <th class="col-contact">担当者</th>
-                                <th class="col-route">ルート</th>
-                            </tr>
-                        </thead>
-                        <tbody id="listTableBody">
-                        </tbody>
-                    </table>
-                </div>
-                <button class="list-close-btn" onclick="hideListModal()">閉じる</button>
             </div>
         </div>
     </div>
@@ -1177,8 +920,6 @@
             }, 2500);
         });
         
-
-
         // ============================================
         // メインアプリのロジック
         // ============================================
@@ -1233,8 +974,6 @@
             document.getElementById('addAddress').value = '';
             document.getElementById('addPhone').value = '';
             document.getElementById('addContact').value = '';
-            document.getElementById('addModel').value = '';
-            document.getElementById('addReason').value = '';
             document.getElementById('addRoute').value = '0';
             document.getElementById('addNote').value = '';
         }
@@ -1244,8 +983,6 @@
             const address = document.getElementById('addAddress').value.trim();
             const phone = document.getElementById('addPhone').value.trim();
             const contact = document.getElementById('addContact').value.trim();
-            const model = document.getElementById('addModel').value;
-            const reason = document.getElementById('addReason').value;
             const routeId = parseInt(document.getElementById('addRoute').value);
             const note = document.getElementById('addNote').value.trim();
             
@@ -1271,8 +1008,6 @@
                         address: address,
                         phone: phone,
                         contact: contact,
-                        model: model,
-                        reason: reason,
                         info: '',
                         routeId: routeId,
                         appointmentDate: '',
@@ -1313,201 +1048,6 @@
         
         function hideResetConfirm() {
             document.getElementById('resetModal').classList.remove('show');
-        }
-        
-        // ============================================
-        // リスト表示機能
-        // ============================================
-        function showListModal() {
-            if (locationData.length === 0) {
-                alert('表示するデータがありません。\nまずCSVまたはExcelファイルを読み込んでください。');
-                return;
-            }
-            
-            const tbody = document.getElementById('listTableBody');
-            tbody.innerHTML = '';
-            
-            // データをソート（ルート順→会社名順）
-            const sortedData = [...locationData].sort((a, b) => {
-                if (a.routeId !== b.routeId) return a.routeId - b.routeId;
-                return (a.company || '').localeCompare(b.company || '', 'ja');
-            });
-            
-            // 総台数を計算
-            let totalUnits = 0;
-            
-            sortedData.forEach((item, index) => {
-                const route = ROUTES.find(r => r.id === item.routeId) || ROUTES[0];
-                const count = item.count || 1;
-                totalUnits += count;
-                
-                // 台数表示（2台以上の場合のみ表示）
-                const countDisplay = count > 1 ? `<span style="color: #e65100; font-weight: bold;">（${count}台）</span>` : '';
-                
-                // 機種名・追加理由の表示（あれば小さく表示）
-                let extraInfo = '';
-                if (item.model || item.reason) {
-                    const modelStr = item.model ? `<span style="background: #e3f2fd; padding: 1px 6px; border-radius: 3px; margin-right: 4px;">${escapeHtml(item.model)}</span>` : '';
-                    const reasonStr = item.reason ? `<span style="background: #fff3e0; padding: 1px 6px; border-radius: 3px; color: #e65100;">${escapeHtml(item.reason)}</span>` : '';
-                    extraInfo = `<div style="font-size: 11px; margin-top: 4px;">${modelStr}${reasonStr}</div>`;
-                }
-                
-                const tr = document.createElement('tr');
-                tr.style.cursor = 'pointer';
-                tr.setAttribute('data-item-id', item.id);
-                tr.innerHTML = `
-                    <td class="col-no">${index + 1}</td>
-                    <td class="col-company">${escapeHtml(item.company || '')}${countDisplay}${extraInfo}</td>
-                    <td class="col-address">${escapeHtml(item.address || '')}</td>
-                    <td class="col-phone">${escapeHtml(item.phone || '-')}</td>
-                    <td class="col-contact">${escapeHtml(item.contact || '-')}</td>
-                    <td class="col-route">
-                        <span class="route-badge-small" style="background-color: ${route.color}">
-                            ${route.name}
-                        </span>
-                    </td>
-                `;
-                // タップで地図に移動
-                tr.addEventListener('click', function() {
-                    goToLocationFromList(item.id);
-                });
-                tbody.appendChild(tr);
-            });
-            
-            document.getElementById('listInfo').textContent = `全 ${locationData.length} 件 ／ 合計 ${totalUnits} 台（タップで地図へ）`;
-            document.getElementById('listModal').classList.add('show');
-        }
-        
-        // リストから地図に移動
-        function goToLocationFromList(itemId) {
-            const item = locationData.find(d => d.id === itemId);
-            if (!item || !item.position) return;
-            
-            // モーダルを閉じる
-            hideListModal();
-            
-            // 地図を移動＆拡大
-            map.setCenter(item.position);
-            map.setZoom(17);
-            
-            // マーカーを見つけて情報ウィンドウを開く
-            const marker = markers.find(m => m.itemId === itemId);
-            if (marker) {
-                setTimeout(() => {
-                    showInfoWindow(item, marker);
-                }, 300);
-            }
-        }
-        
-        function hideListModal() {
-            document.getElementById('listModal').classList.remove('show');
-        }
-        
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-        
-        // ============================================
-        // バックアップ（エクスポート/インポート）機能
-        // ============================================
-        function exportBackup() {
-            if (locationData.length === 0) {
-                alert('保存するデータがありません');
-                return;
-            }
-            
-            const backupData = {
-                version: '1.0',
-                exportDate: new Date().toISOString(),
-                dataCount: locationData.length,
-                data: locationData
-            };
-            
-            const jsonStr = JSON.stringify(backupData, null, 2);
-            const blob = new Blob([jsonStr], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            
-            const today = new Date();
-            const dateStr = today.getFullYear() + 
-                           ('0' + (today.getMonth() + 1)).slice(-2) + 
-                           ('0' + today.getDate()).slice(-2);
-            
-            const fileName = `maintenance_backup_${dateStr}.json`;
-            
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = fileName;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            
-            alert(`✅ 保存完了！\n\n` +
-                  `📁 ファイル名:\n${fileName}\n\n` +
-                  `📂 保存場所:\n「ダウンロード」または「マイファイル」フォルダを確認してください\n\n` +
-                  `💡 復元時は「📂 復元」ボタンから\nこのファイルを選択してください\n\n` +
-                  `（${locationData.length}件のデータ）`);
-        }
-        
-        function importBackup(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const backupData = JSON.parse(e.target.result);
-                    
-                    if (!backupData.data || !Array.isArray(backupData.data)) {
-                        alert('❌ 無効なバックアップファイルです');
-                        return;
-                    }
-                    
-                    const confirmMsg = `${backupData.dataCount || backupData.data.length}件のデータを復元しますか？\n\n` +
-                                       `※現在のデータは上書きされます`;
-                    
-                    if (!confirm(confirmMsg)) {
-                        event.target.value = '';
-                        return;
-                    }
-                    
-                    // 現在のマーカーをクリア
-                    markers.forEach(m => m.setMap(null));
-                    markers = [];
-                    
-                    // データを復元
-                    locationData = backupData.data;
-                    
-                    // マーカーを再作成
-                    const bounds = new google.maps.LatLngBounds();
-                    locationData.forEach(item => {
-                        if (item.position) {
-                            createMarker(item);
-                            bounds.extend(new google.maps.LatLng(item.position.lat, item.position.lng));
-                        }
-                    });
-                    
-                    // 保存
-                    saveToStorage();
-                    updateLegend();
-                    document.getElementById('countBadge').textContent = `${locationData.length}件`;
-                    
-                    // 地図をフィット
-                    if (locationData.length > 0) {
-                        map.fitBounds(bounds);
-                    }
-                    
-                    alert(`✅ 復元完了！\n${locationData.length}件のデータを読み込みました`);
-                    
-                } catch (error) {
-                    alert('❌ ファイルの読み込みに失敗しました\n' + error.message);
-                }
-                
-                event.target.value = '';
-            };
-            reader.readAsText(file);
         }
         
         function resetAllData() {
@@ -1789,16 +1329,12 @@
             const displayName = item.displayName || item.company;
             const countDisplay = item.count > 1 ? `<div style="background: #e3f2fd; padding: 4px 8px; border-radius: 4px; margin-bottom: 8px; font-size: 13px;">📦 <strong>${item.count}台</strong> 設置</div>` : '';
             const floorDisplay = (item.floors && item.floors.length > 0) ? `<div class="info-row"><span class="info-label">🏢 設置階：</span>${item.floors.join(', ')}</div>` : '';
-            const modelDisplay = item.model ? `<div class="info-row"><span class="info-label">🔧 機種名：</span>${item.model}</div>` : '';
-            const reasonDisplay = item.reason ? `<div class="info-row"><span class="info-label">📋 追加理由：</span><span style="background: #fff3e0; padding: 2px 8px; border-radius: 4px; font-weight: bold; color: #e65100;">${item.reason}</span></div>` : '';
             let routeOptions = ROUTES.map(r => `<option value="${r.id}" ${item.routeId === r.id ? 'selected' : ''}>${r.name}</option>`).join('');
             
             const content = `
                 <div class="info-form">
                     <h3>${displayName}</h3>
                     ${countDisplay}
-                    ${modelDisplay}
-                    ${reasonDisplay}
                     <div class="info-row"><span class="info-label">📍 住所：</span><br>${item.address}</div>
                     ${floorDisplay}
                     <div class="info-row"><span class="info-label">👤 担当者：</span>${item.contact || '未登録'}</div>
@@ -1899,38 +1435,26 @@
             if (locationData.length === 0) { alert('データがありません。CSVを読み込んでください。'); return; }
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF('l', 'mm', 'a4');
-            
-            // 日本語フォントを登録
-            doc.addFileToVFS('NotoSansJP-Regular.ttf', NOTO_SANS_JP_BASE64);
-            doc.addFont('NotoSansJP-Regular.ttf', 'NotoSansJP', 'normal');
-            doc.setFont('NotoSansJP');
-            
+            doc.setFont('helvetica');
             doc.setFontSize(18);
-            doc.text('メンテナンスマップ - 予定一覧', 14, 15);
+            doc.text('Maintenance Map - Appointment List', 14, 15);
             doc.setFontSize(10);
             const today = new Date().toLocaleDateString('ja-JP');
-            doc.text(`出力日: ${today}`, 14, 22);
+            doc.text(`Output: ${today}`, 14, 22);
             const tableData = locationData.map(item => {
                 const route = ROUTES[item.routeId] || ROUTES[0];
                 const dateTime = item.appointmentDate ? `${item.appointmentDate} ${item.appointmentTime || ''}`.trim() : '';
                 const countStr = item.count > 1 ? `${item.count}台` : '1台';
                 const floorStr = (item.floors && item.floors.length > 0) ? item.floors.join(', ') : '';
-                // 機種名・追加理由を備考に追加
-                let noteStr = '';
-                if (item.model || item.reason) {
-                    const tags = [item.model, item.reason].filter(Boolean).join('/');
-                    noteStr = `[${tags}] `;
-                }
-                noteStr += item.note || '';
-                return [item.no, item.company, countStr, item.address, floorStr, item.phone, item.contact, route.name, dateTime, noteStr];
+                return [item.no, item.company, countStr, item.address, floorStr, item.phone, item.contact, route.name, dateTime, item.note || ''];
             });
             tableData.sort((a, b) => ROUTES.findIndex(r => r.name === a[7]) - ROUTES.findIndex(r => r.name === b[7]));
             doc.autoTable({
-                head: [['No', '会社名', '台数', '住所', '階数', '電話番号', '担当者', 'ルート', '予定日時', '備考']],
+                head: [['No', 'Company', 'Count', 'Address', 'Floor', 'Phone', 'Contact', 'Route', 'Appointment', 'Note']],
                 body: tableData,
                 startY: 28,
-                styles: { fontSize: 7, cellPadding: 2, font: 'NotoSansJP' },
-                headStyles: { fillColor: [66, 133, 244], textColor: 255, fontStyle: 'normal', font: 'NotoSansJP' },
+                styles: { fontSize: 7, cellPadding: 2 },
+                headStyles: { fillColor: [66, 133, 244], textColor: 255, fontStyle: 'bold' },
                 columnStyles: { 0: { cellWidth: 10 }, 1: { cellWidth: 30 }, 2: { cellWidth: 12 }, 3: { cellWidth: 45 }, 4: { cellWidth: 20 }, 5: { cellWidth: 22 }, 6: { cellWidth: 18 }, 7: { cellWidth: 16 }, 8: { cellWidth: 25 }, 9: { cellWidth: 30 } },
                 didParseCell: function(data) {
                     if (data.column.index === 7 && data.section === 'body') {
@@ -1944,14 +1468,14 @@
                     }
                 }
             });
-            doc.save(`メンテナンスマップ_${today.replace(/\//g, '-')}.pdf`);
+            doc.save(`maintenance_map_${today.replace(/\//g, '-')}.pdf`);
         }
         
         function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
     </script>
 
     <!-- Google Maps API -->
-    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAbzPpvv1voF_qjTfyQdKiCZ0cGL6yeVio&callback=initMap"></script>
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY_HERE&callback=initMap"></script>
     
     <!-- Service Worker登録 -->
     <script>
