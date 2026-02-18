@@ -73,13 +73,18 @@ const DataStorage = (() => {
 
     // --- ルートデータ ---
 
-    // v2.0 - ルート定義（デフォルト5ルート）
+    // v2.0.1更新 - ルート定義（10ルート、v1.0互換）
     const DEFAULT_ROUTES = [
         { id: 'route_1', name: 'ルート1', color: '#4285f4', order: [] },
         { id: 'route_2', name: 'ルート2', color: '#ea4335', order: [] },
         { id: 'route_3', name: 'ルート3', color: '#34a853', order: [] },
         { id: 'route_4', name: 'ルート4', color: '#ff9800', order: [] },
-        { id: 'route_5', name: 'ルート5', color: '#9c27b0', order: [] }
+        { id: 'route_5', name: 'ルート5', color: '#9c27b0', order: [] },
+        { id: 'route_6', name: 'ルート6', color: '#00bcd4', order: [] },
+        { id: 'route_7', name: 'ルート7', color: '#e91e63', order: [] },
+        { id: 'route_8', name: 'ルート8', color: '#795548', order: [] },
+        { id: 'route_9', name: 'ルート9', color: '#607d8b', order: [] },
+        { id: 'route_10', name: 'ルート10', color: '#ff5722', order: [] }
     ];
 
     // v2.0 - ルート取得
@@ -172,7 +177,7 @@ const DataStorage = (() => {
         alert('💾 バックアップを保存しました！');
     }
 
-    // v2.0 - JSONバックアップインポート
+    // v2.0.1追加 - JSONバックアップインポート（v1.0互換対応）
     function importBackup(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -180,11 +185,27 @@ const DataStorage = (() => {
         reader.onload = (e) => {
             try {
                 const data = JSON.parse(e.target.result);
+
+                // v2.0.1追加 - v1.0フォーマット検出＆変換
+                if (data.version === '1.0' && data.data) {
+                    const converted = convertV1toV2(data);
+                    saveCustomers(converted.customers);
+                    // v2.0.1 - v1.0の座標をキャッシュに保存
+                    converted.customers.forEach(c => {
+                        if (c.lat && c.lng && c.address) {
+                            setGeoCache(c.address, { lat: c.lat, lng: c.lng });
+                        }
+                    });
+                    alert(`📂 v1.0バックアップを変換して復元しました！\n${converted.customers.length}件のデータを読み込みました。\nページをリロードします。`);
+                    location.reload();
+                    return;
+                }
+
+                // v2.0 - v2.0フォーマットの通常復元
                 if (data.customers) saveCustomers(data.customers);
                 if (data.routes) saveRoutes(data.routes);
                 if (data.segments) saveSegments(data.segments);
                 if (data.settings) {
-                    // v2.0 - APIキーは現在のを維持（バックアップに含めない）
                     const current = getSettings();
                     data.settings.apiKey = current.apiKey;
                     saveSettings(data.settings);
@@ -198,6 +219,68 @@ const DataStorage = (() => {
         };
         reader.readAsText(file);
         event.target.value = '';
+    }
+
+    // v2.0.1追加 - v1.0→v2.0データ変換
+    function convertV1toV2(v1Data) {
+        const customers = [];
+        const routes = getRoutes();
+
+        for (const item of v1Data.data) {
+            // v2.0.1 - v1.0のrouteId(数値0-10)→v2.0のrouteId(文字列)に変換
+            let routeId = null;
+            if (item.routeId && item.routeId > 0 && item.routeId <= 10) {
+                routeId = 'route_' + item.routeId;
+            }
+
+            // v2.0.1 - ステータス判定
+            let status = 'pending';
+            if (item.appointmentDate) status = 'appointed';
+
+            // v2.0.1 - アポ日時の統合
+            let appoDate = null;
+            if (item.appointmentDate) {
+                appoDate = item.appointmentDate;
+                if (item.appointmentTime) {
+                    appoDate += 'T' + item.appointmentTime;
+                }
+            }
+
+            // v2.0.1 - 台数（countフィールドまたはallItemsの長さ）
+            const unitCount = item.count || (item.allItems ? item.allItems.length : 1);
+
+            // v2.0.1 - 階数情報をメモに含める
+            let note = item.note || '';
+            if (item.floors && item.floors.length > 0 && !note.includes('階')) {
+                note = '【階数】' + item.floors.join(', ') + (note ? '\n' + note : '');
+            }
+
+            const customer = {
+                id: item.id || 'c_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                company: item.displayName || item.company || '',
+                address: item.originalAddress || item.address || '',
+                phone: item.phone || '',
+                contact: item.contact || '',
+                note: note,
+                managementNo: item.no || '',
+                model: item.model || '',
+                reason: item.reason || '',
+                info: item.info || '',
+                routeId: routeId,
+                status: status,
+                appoDate: appoDate,
+                unitCount: unitCount,
+                lat: item.position ? item.position.lat : null,
+                lng: item.position ? item.position.lng : null,
+                floors: item.floors || [],
+                allItems: item.allItems || [],
+                createdAt: v1Data.exportDate || new Date().toISOString()
+            };
+
+            customers.push(customer);
+        }
+
+        return { customers };
     }
 
     // v2.0 - 全データリセット

@@ -63,7 +63,7 @@ const MapCore = (() => {
         }
     }
 
-    // v2.0 - 全マーカーを地図にプロット
+    // v2.0.1更新 - 全マーカーを地図にプロット（v1.0座標対応）
     function plotAllMarkers(customers) {
         // v2.0 - 既存マーカーをクリア
         clearMarkers();
@@ -71,19 +71,32 @@ const MapCore = (() => {
         const cache = DataStorage.getGeoCache();
         const bounds = new google.maps.LatLngBounds();
         let hasValidMarker = false;
+        const uncached = [];
 
         for (const customer of customers) {
+            // v2.0.1 - 座標の優先順位: キャッシュ → 顧客データ直接 → ジオコーディング必要
             const cached = cache[customer.address];
             if (cached) {
                 const latLng = new google.maps.LatLng(cached.lat, cached.lng);
                 createMarker(customer, latLng);
                 bounds.extend(latLng);
                 hasValidMarker = true;
+            } else if (customer.lat && customer.lng) {
+                // v2.0.1追加 - v1.0バックアップの座標を直接使用
+                const latLng = new google.maps.LatLng(customer.lat, customer.lng);
+                createMarker(customer, latLng);
+                bounds.extend(latLng);
+                hasValidMarker = true;
+                // v2.0.1 - キャッシュにも保存
+                if (customer.address) {
+                    DataStorage.setGeoCache(customer.address, { lat: customer.lat, lng: customer.lng });
+                }
+            } else if (customer.address) {
+                uncached.push(customer);
             }
         }
 
         // v2.0 - キャッシュにない顧客をジオコーディング
-        const uncached = customers.filter(c => !cache[c.address] && c.address);
         if (uncached.length > 0) {
             geocodeAndPlot(uncached);
         }
@@ -235,7 +248,7 @@ const MapCore = (() => {
         return marker;
     }
 
-    // v2.0 - 吹き出し表示
+    // v2.0.1更新 - 吹き出し表示（v1.0フィールド対応）
     function showInfoWindow(marker, customer) {
         const statusText = { pending: '🔴 未アポ', appointed: '🟢 アポ済み', completed: '⚪ 完了' };
         const routes = DataStorage.getRoutes();
@@ -245,17 +258,32 @@ const MapCore = (() => {
         html += `<h3>${customer.company || '不明'}`;
         if (customer.unitCount > 1) html += ` <small>(${customer.unitCount}台)</small>`;
         html += `</h3>`;
+        // v2.0.1追加 - 管理番号
+        if (customer.managementNo) html += `<p>🔖 ${customer.managementNo}</p>`;
         html += `<p>📍 ${customer.address || ''}</p>`;
         if (customer.phone) html += `<p>📞 ${customer.phone}</p>`;
         if (customer.contact) html += `<p>👤 ${customer.contact}</p>`;
+        // v2.0.1追加 - 階数
+        if (customer.floors && customer.floors.length > 0) {
+            html += `<p>🏢 ${customer.floors.join(', ')}</p>`;
+        }
+        // v2.0.1追加 - 機種名
+        if (customer.model) html += `<p>💧 ${customer.model}</p>`;
         if (route) html += `<p>🗺️ ${route.name}</p>`;
         html += `<p>${statusText[customer.status] || statusText.pending}</p>`;
-        if (customer.appoDate) html += `<p>📅 ${new Date(customer.appoDate).toLocaleString('ja-JP')}</p>`;
-        if (customer.note) html += `<p style="font-size:11px;color:#64748b;">📝 ${customer.note}</p>`;
+        if (customer.appoDate) {
+            const d = new Date(customer.appoDate);
+            const dateStr = isNaN(d.getTime()) ? customer.appoDate : d.toLocaleString('ja-JP');
+            html += `<p>📅 ${dateStr}</p>`;
+        }
+        if (customer.note) html += `<p style="font-size:11px;color:#64748b;white-space:pre-wrap;">📝 ${customer.note}</p>`;
+        // v2.0.1追加 - 追加情報
+        if (customer.info) html += `<p style="font-size:11px;color:#64748b;">ℹ️ ${customer.info}</p>`;
         html += `<div class="info-actions">`;
         html += `<button class="info-btn info-btn-edit" onclick="MapCore.openEdit('${customer.id}')">✏️ 編集</button>`;
         if (customer.phone) {
-            html += `<button class="info-btn info-btn-call" onclick="window.open('tel:${customer.phone}')">📞 電話</button>`;
+            const phoneNum = customer.phone.split('/')[0].replace(/[^0-9\-]/g, '');
+            html += `<button class="info-btn info-btn-call" onclick="window.open('tel:${phoneNum}')">📞 電話</button>`;
         }
         html += `</div></div>`;
 
@@ -317,8 +345,12 @@ const MapCore = (() => {
             html += `<div class="customer-item" onclick="MapCore.focusMarker('${c.id}')">`;
             html += `<div class="customer-status ${statusClass}"></div>`;
             html += `<div class="customer-info">`;
-            html += `<div class="customer-name">${c.company || '不明'}</div>`;
-            html += `<div class="customer-address">${c.address || ''}</div>`;
+            html += `<div class="customer-name">${c.company || '不明'}`;
+            if (c.managementNo) html += ` <small style="color:#94a3b8;font-weight:400;">${c.managementNo}</small>`;
+            html += `</div>`;
+            html += `<div class="customer-address">${c.address || ''}`;
+            if (c.floors && c.floors.length > 0) html += ` 🏢${c.floors.join(',')}`;
+            html += `</div>`;
             html += `</div>`;
             if (c.unitCount > 1) {
                 html += `<span class="customer-count">${c.unitCount}台</span>`;
