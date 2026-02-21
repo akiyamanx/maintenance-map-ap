@@ -318,6 +318,11 @@ jobs:
           ✅ ShellCheck: 合格"
           fi
 
+          PAGES_URL="https://${{ github.repository_owner }}.github.io/${REPO_NAME#*/}/"
+          MESSAGE="${MESSAGE}
+
+          🌐 アプリ: ${PAGES_URL}"
+
           curl -s -X POST "https://api.line.me/v2/bot/message/push" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${LINE_TOKEN}" \
@@ -379,13 +384,16 @@ jobs:
           ${SECURITYCHECK_DETAIL}"
           fi
 
+          PAGES_URL="https://${{ github.repository_owner }}.github.io/${REPO_NAME#*/}/"
+
           MESSAGE="🚨 CI不合格！
 
           📦 ${REPO_NAME}
           📝 ${SHORT_SHA}: ${COMMIT_MSG}
           ${FAIL_REASONS}
 
-          🔗 詳細: ${ACTIONS_URL}"
+          🔗 詳細: ${ACTIONS_URL}
+          🌐 アプリ: ${PAGES_URL}"
 
           curl -s -X POST "https://api.line.me/v2/bot/message/push" \
             -H "Content-Type: application/json" \
