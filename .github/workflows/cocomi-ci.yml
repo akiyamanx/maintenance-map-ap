@@ -244,7 +244,6 @@ jobs:
           for item in "${checks[@]}"; do
             id="${item%%:*}"
             label="${item##*:}"
-            outcome="${{ steps[id].outcome }}"
             case "$id" in
               shellcheck)
                 if [ "${{ steps.detect.outputs.has_sh }}" != "true" ]; then
