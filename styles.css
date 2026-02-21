@@ -176,7 +176,7 @@ body {
     box-shadow: 0 -4px 16px rgba(0,0,0,0.1);
     z-index: 150;
     max-height: 55vh;
-    transition: transform 0.3s ease;
+    transition: transform 0.3s ease, max-height 0.3s ease;
 }
 .bottom-panel.collapsed { transform: translateY(calc(100% - 44px)); }
 .panel-handle {
@@ -192,9 +192,9 @@ body {
     padding: 0 8px;
 }
 .tab {
-    flex: 1; padding: 8px;
+    flex: 1; padding: 8px 4px;
     border: none; background: none;
-    font-size: 13px; font-weight: 500;
+    font-size: 12px; font-weight: 500;
     cursor: pointer; font-family: var(--font);
     color: var(--text-light);
     border-bottom: 2px solid transparent;

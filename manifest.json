@@ -1,7 +1,7 @@
 {
-    "name": "メンテナンスマップ v2.0",
+    "name": "メンテナンスマップ v2.1",
     "short_name": "メンテマップ",
-    "description": "ウォーターサーバーメンテナンス先を地図で管理するアプリ",
+    "description": "ウォーターサーバーメンテナンス先を地図で管理＋交通費精算書作成アプリ",
     "start_url": "./index.html",
     "display": "standalone",
     "orientation": "portrait",

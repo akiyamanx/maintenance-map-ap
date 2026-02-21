@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>メンテナンスマップ v2.0</title>
+    <title>メンテナンスマップ v2.1</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1a56db">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -12,6 +12,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="expense-styles.css">
 </head>
 <body>
     <!-- v2.0 スプラッシュ画面 -->
@@ -20,12 +21,13 @@
             <div class="splash-icon">📍</div>
             <h1 class="splash-title">メンテナンスマップ</h1>
             <p class="splash-sub">Maintenance Route Manager</p>
-            <p class="splash-ver">v2.0</p>
+            <p class="splash-ver">v2.1</p>
             <div class="splash-features">
                 <span>📊 CSV取込</span>
                 <span>🗺️ 自動マッピング</span>
                 <span>🛣️ ルート管理</span>
                 <span>📄 PDF出力</span>
+                <span>💰 交通費精算</span>
             </div>
             <button class="splash-btn" onclick="closeSplash()">はじめる</button>
             <p class="splash-credit">COCOMI CORE 🤍</p>
@@ -73,6 +75,7 @@
             <button class="tab active" data-tab="list" onclick="switchTab('list')">📋 リスト</button>
             <button class="tab" data-tab="route" onclick="switchTab('route')">🗺️ ルート</button>
             <button class="tab" data-tab="summary" onclick="switchTab('summary')">📊 集計</button>
+            <button class="tab" data-tab="expense" onclick="switchTab('expense')">💰 精算書</button>
         </div>
         <div class="panel-content">
             <div class="tab-content active" id="tabList">
@@ -85,6 +88,9 @@
                 <div id="summaryContent" class="summary-content">
                     <p class="empty-msg">ルートを作成すると集計が表示されます</p>
                 </div>
+            </div>
+            <div class="tab-content" id="tabExpense">
+                <p class="empty-msg">💰 精算書タブを選択すると表示されます</p>
             </div>
         </div>
     </div>
@@ -207,7 +213,7 @@
     <div class="loading-overlay" id="loading" style="display:none;">
         <div class="loading-content">
             <div class="loading-spinner"></div>
-            <p>📍 住所を変換中...</p>
+            <p>📍 処理中...</p>
             <p id="loadingProgress"></p>
         </div>
     </div>
@@ -216,12 +222,15 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <!-- v2.0 アプリモジュール -->
     <script src="data-storage.js"></script>
     <script src="csv-handler.js"></script>
     <script src="map-core.js"></script>
     <script src="route-manager.js"></script>
+    <script src="expense-form.js"></script>
+    <script src="expense-pdf.js"></script>
     <script src="ui-actions.js"></script>
 
     <!-- v2.0 APIキー読み込み＋初期化 -->

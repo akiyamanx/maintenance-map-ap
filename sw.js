@@ -4,7 +4,7 @@
 // v2.0新規作成
 // ============================================
 
-const CACHE_NAME = 'maintenance-map-v2.0.0';
+const CACHE_NAME = 'maintenance-map-v2.1.0';
 const urlsToCache = [
     './',
     './index.html',
@@ -14,6 +14,9 @@ const urlsToCache = [
     './map-core.js',
     './route-manager.js',
     './ui-actions.js',
+    './expense-styles.css',
+    './expense-form.js',
+    './expense-pdf.js',
     './manifest.json'
 ];
 

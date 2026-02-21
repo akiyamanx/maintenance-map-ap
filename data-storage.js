@@ -11,7 +11,8 @@ const DataStorage = (() => {
         routes: 'mm_routes',
         segments: 'mm_segments',
         geocache: 'mm_geocache',
-        settings: 'mm_settings'
+        settings: 'mm_settings',
+        expenses: 'mm_expenses'
     };
 
     // --- 顧客データ ---
@@ -155,17 +156,61 @@ const DataStorage = (() => {
         localStorage.setItem(KEYS.settings, JSON.stringify(settings));
     }
 
+    // --- 精算書データ（v2.1追加） ---
+
+    // v2.1追加 - 精算書下書き一覧取得
+    function getExpenses() {
+        try {
+            const data = localStorage.getItem(KEYS.expenses);
+            return data ? JSON.parse(data) : [];
+        } catch (e) {
+            console.error('精算書データ読込エラー:', e);
+            return [];
+        }
+    }
+
+    // v2.1追加 - 精算書下書き保存
+    function saveExpenses(expenses) {
+        try {
+            localStorage.setItem(KEYS.expenses, JSON.stringify(expenses));
+            return true;
+        } catch (e) {
+            console.error('精算書データ保存エラー:', e);
+            alert('精算書の保存に失敗しました。ストレージ容量を確認してください。');
+            return false;
+        }
+    }
+
+    // v2.1追加 - 精算書1件追加（最大20件）
+    function addExpense(expense) {
+        const expenses = getExpenses();
+        expense.id = expense.id || 'exp_' + Date.now();
+        expense.createdAt = new Date().toISOString();
+        expenses.unshift(expense);
+        if (expenses.length > 20) expenses.splice(20);
+        saveExpenses(expenses);
+        return expense;
+    }
+
+    // v2.1追加 - 精算書1件削除
+    function deleteExpense(id) {
+        let expenses = getExpenses();
+        expenses = expenses.filter(e => e.id !== id);
+        saveExpenses(expenses);
+    }
+
     // --- バックアップ ---
 
     // v2.0 - JSONバックアップエクスポート
     function exportBackup() {
         const data = {
-            version: '2.0',
+            version: '2.1',
             exportDate: new Date().toISOString(),
             customers: getCustomers(),
             routes: getRoutes(),
             segments: getSegments(),
-            settings: getSettings()
+            settings: getSettings(),
+            expenses: getExpenses()
         };
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -205,6 +250,7 @@ const DataStorage = (() => {
                 if (data.customers) saveCustomers(data.customers);
                 if (data.routes) saveRoutes(data.routes);
                 if (data.segments) saveSegments(data.segments);
+                if (data.expenses) saveExpenses(data.expenses);
                 if (data.settings) {
                     const current = getSettings();
                     data.settings.apiKey = current.apiKey;
@@ -288,6 +334,7 @@ const DataStorage = (() => {
         localStorage.removeItem(KEYS.customers);
         localStorage.removeItem(KEYS.routes);
         localStorage.removeItem(KEYS.segments);
+        localStorage.removeItem(KEYS.expenses);
         // v2.0 - 設定とキャッシュは残す
     }
 
@@ -298,6 +345,7 @@ const DataStorage = (() => {
         getSegments, saveSegments,
         getGeoCache, setGeoCache,
         getSettings, saveSettings,
+        getExpenses, saveExpenses, addExpense, deleteExpense,
         exportBackup, importBackup, resetAll
     };
 })();

@@ -159,6 +159,19 @@ function switchTab(tabName) {
     if (tabName === 'summary') {
         RouteManager.updateSummary();
     }
+
+    // v2.1追加 - 精算書タブを開いたら初期化
+    if (tabName === 'expense') {
+        ExpenseForm.init();
+    }
+
+    // v2.1追加 - 精算書タブ選択時はパネルを広げる
+    if (tabName === 'expense') {
+        document.getElementById('bottomPanel').classList.remove('collapsed');
+        document.getElementById('bottomPanel').style.maxHeight = '85vh';
+    } else {
+        document.getElementById('bottomPanel').style.maxHeight = '55vh';
+    }
 }
 
 // v2.0 - 凡例トグル
