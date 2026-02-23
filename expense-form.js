@@ -1,8 +1,9 @@
 // ============================================
-// メンテナンスマップ v2.1 - expense-form.js
+// メンテナンスマップ v2.2 - expense-form.js
 // 交通費精算書フォーム・下書き管理
 // v2.1新規作成 - CULOchanSEISANshoから統合
 // PDF生成はexpense-pdf.jsに委譲
+// v2.2改修 - ETC明細読込ボタン追加
 // ============================================
 
 const ExpenseForm = (() => {
@@ -48,10 +49,17 @@ const ExpenseForm = (() => {
                     </div>
                 </div>
 
-                <a href="https://www.etc-meisai.jp/" target="_blank"
-                   class="exp-etc-btn">
-                    🛣️ ETC利用照会サービスを開く
-                </a>
+                <div style="display:flex;gap:8px;margin-bottom:10px;">
+                    <a href="https://www.etc-meisai.jp/" target="_blank"
+                       class="exp-etc-btn" style="flex:1;">
+                        🛣️ ETC照会を開く
+                    </a>
+                    <label class="exp-etc-btn" style="flex:1;background:linear-gradient(135deg,#0d7377,#14919b);cursor:pointer;">
+                        📂 ETC明細読込
+                        <input type="file" accept=".csv" style="display:none"
+                            onchange="EtcReader.handleFile(event)">
+                    </label>
+                </div>
 
                 <div class="exp-section">
                     <div class="exp-section-title">🚃 交通費明細</div>

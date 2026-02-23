@@ -90,6 +90,20 @@
     color: var(--primary);
 }
 
+/* v2.2追加 - ETC明細リスト */
+.etc-list { max-height: 300px; overflow-y: auto; margin-bottom: 12px; }
+
+.etc-item { padding: 8px; border-bottom: 1px solid var(--border); }
+.etc-item label {
+    display: flex; align-items: center; gap: 8px;
+    cursor: pointer; font-size: 13px;
+}
+.etc-check { width: 18px; height: 18px; flex-shrink: 0; }
+.etc-info { flex: 1; min-width: 0; }
+.etc-date { font-size: 11px; color: var(--text-light); display: block; }
+.etc-route { font-size: 13px; font-weight: 500; }
+.etc-amount { font-weight: 700; color: var(--primary); white-space: nowrap; }
+
 /* v2.2追加 - 距離計算ボタン */
 .route-dist-btn {
     background: var(--success); color: white;
