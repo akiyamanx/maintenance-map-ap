@@ -1,11 +1,11 @@
-# メンテナンスマップ v2.0
+# メンテナンスマップ v2.2
 
 ## プロジェクト概要
 ウォーターサーバーメンテナンス先の地図管理PWAアプリ
 
 ## 技術スタック
 - HTML + CSS + Vanilla JS（フレームワークなし）
-- Google Maps API（Geocoding, Places, Geometry）
+- Google Maps API（Geocoding, Places, Geometry, Directions）
 - LocalStorage（データ永続化）
 - jsPDF + AutoTable（PDF出力）
 - SheetJS/xlsx（Excel読込）
@@ -21,6 +21,13 @@
 | `map-core.js` | Google Maps初期化、マーカー管理、ジオコーディング |
 | `route-manager.js` | ルート管理、色分け、PDF出力、集計 |
 | `ui-actions.js` | グローバルUI関数、モーダル・メニュー・パネル制御 |
+| `expense-form.js` | 交通費精算書フォーム管理 |
+| `expense-pdf.js` | 精算書PDF出力 |
+| `expense-styles.css` | 精算書関連スタイル |
+| `route-order.js` | 訪問順ドラッグ&ドロップ管理、区間道路種別エディタ |
+| `route-order-styles.css` | 訪問順・区間・ETC明細モーダルのスタイル |
+| `distance-calc.js` | Directions APIを使った走行距離計算 |
+| `etc-reader.js` | ETC利用明細CSV読込・精算書自動反映 |
 | `sw.js` | Service Worker、キャッシュ管理 |
 | `manifest.json` | PWAマニフェスト |
 
@@ -51,3 +58,4 @@
 
 <!-- v2.1 精算書統合完了確認 2026-02-21 -->
 <!-- LINE通知URL確認テスト 2026-02-21 -->
+<!-- v2.2 訪問順設定・区間道路種別・走行距離計算・ETC明細読込 2026-02-24 -->

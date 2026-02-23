@@ -1,10 +1,11 @@
 // ============================================
-// メンテナンスマップ v2.0 - sw.js
+// メンテナンスマップ v2.2 - sw.js
 // Service Worker（PWAオフライン対応）
 // v2.0新規作成
+// v2.2 キャッシュバージョン更新、新規ファイル追加
 // ============================================
 
-const CACHE_NAME = 'maintenance-map-v2.1.0';
+const CACHE_NAME = 'maintenance-map-v2.2.0';
 const urlsToCache = [
     './',
     './index.html',
@@ -17,6 +18,10 @@ const urlsToCache = [
     './expense-styles.css',
     './expense-form.js',
     './expense-pdf.js',
+    './route-order.js',
+    './route-order-styles.css',
+    './distance-calc.js',
+    './etc-reader.js',
     './manifest.json'
 ];
 
