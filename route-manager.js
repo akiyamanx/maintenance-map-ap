@@ -19,11 +19,24 @@ const RouteManager = (() => {
         for (const route of routes) {
             const members = customers.filter(c => c.routeId === route.id);
 
+            // v2.2追加 - order配列がある場合は訪問順で並べ替え
+            if (route.order && route.order.length > 0) {
+                members.sort((a, b) => {
+                    const ai = route.order.indexOf(a.id);
+                    const bi = route.order.indexOf(b.id);
+                    return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+                });
+            }
+
             html += `<div class="route-section">`;
             html += `<div class="route-header" onclick="RouteManager.toggleRouteSection(this)">`;
             html += `<span class="route-color-dot" style="background:${route.color}"></span>`;
             html += `<span>${route.name}</span>`;
             html += `<span class="route-count">${members.length}件</span>`;
+            // v2.2追加 - 訪問順編集ボタン（2件以上で表示）
+            if (members.length >= 2) {
+                html += `<button class="route-order-btn" onclick="event.stopPropagation();RouteOrder.startEdit('${route.id}')">🔢</button>`;
+            }
             html += `</div>`;
 
             if (members.length > 0) {

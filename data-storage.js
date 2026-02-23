@@ -329,6 +329,16 @@ const DataStorage = (() => {
         return { customers };
     }
 
+    // v2.2追加 - ルートの訪問順を更新
+    function updateRouteOrder(routeId, orderArray) {
+        const routes = getRoutes();
+        const route = routes.find(r => r.id === routeId);
+        if (route) {
+            route.order = orderArray;
+            saveRoutes(routes);
+        }
+    }
+
     // v2.0 - 全データリセット
     function resetAll() {
         localStorage.removeItem(KEYS.customers);
@@ -341,7 +351,7 @@ const DataStorage = (() => {
     // v2.0 - 公開API
     return {
         getCustomers, saveCustomers, addCustomer, updateCustomer, deleteCustomer,
-        getRoutes, saveRoutes, DEFAULT_ROUTES,
+        getRoutes, saveRoutes, DEFAULT_ROUTES, updateRouteOrder,
         getSegments, saveSegments,
         getGeoCache, setGeoCache,
         getSettings, saveSettings,
