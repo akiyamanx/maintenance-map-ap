@@ -1,8 +1,9 @@
 // ============================================
-// メンテナンスマップ v2.2.1 - csv-handler.js
+// メンテナンスマップ v2.2.2 - csv-handler.js
 // CSV/Excelアップロード・パース・同一住所まとめ
 // v2.0新規作成 - 分割ファイル構成対応
 // v2.2.1変更 - 営業所・型式・フィルター・都道府県の検出追加
+// v2.2.2変更 - ヘッダー行自動検出改善、mapキー名をequipTypeに統一
 // ============================================
 
 const CsvHandler = (() => {
@@ -82,29 +83,38 @@ const CsvHandler = (() => {
     // v2.0 - 行データを顧客データに変換
     function processRows(rows) {
         if (rows.length < 2) {
-            alert('データが見つかりません。ヘッダー行＋データ行が必要です。');
+            alert('データが見つかりません。');
             return;
         }
 
-        // v2.0 - ヘッダー行からカラムを自動検出
-        const header = rows[0].map(h => String(h || '').trim());
+        // v2.2.2改善 - ヘッダー行を自動検出（「会社」「住所」「設置先」を含む行を探す）
+        let headerRowIdx = 0;
+        for (let i = 0; i < Math.min(rows.length, 10); i++) {
+            const rowStr = rows[i].map(c => String(c || '')).join('').toLowerCase();
+            if (rowStr.includes('会社') || rowStr.includes('設置先') || rowStr.includes('住所')) {
+                headerRowIdx = i;
+                break;
+            }
+        }
+
+        const header = rows[headerRowIdx].map(h => String(h || '').trim());
         const colMap = detectColumns(header);
 
         if (colMap.company === -1 && colMap.address === -1) {
-            alert('会社名または住所の列が見つかりません。\nヘッダー行に「会社名」「住所」が含まれているか確認してください。');
+            alert('会社名または住所の列が見つかりません。');
             return;
         }
 
-        const dataRows = rows.slice(1).filter(r => r.length > 1 && r.some(c => c));
+        const dataRows = rows.slice(headerRowIdx + 1).filter(r => r.length > 1 && r.some(c => c));
         const newCustomers = [];
 
         for (const row of dataRows) {
             const company = colMap.company >= 0 ? String(row[colMap.company] || '').trim() : '';
-            // v2.2.1変更 - 都道府県+住所を結合
+            // v2.2.2変更 - 都道府県と住所を結合
             let address = colMap.address >= 0 ? String(row[colMap.address] || '').trim() : '';
             if (colMap.prefecture >= 0) {
                 const pref = String(row[colMap.prefecture] || '').trim();
-                if (pref && !address.startsWith(pref)) {
+                if (pref && address && !address.startsWith(pref)) {
                     address = pref + address;
                 }
             }
@@ -118,9 +128,9 @@ const CsvHandler = (() => {
                 contact: colMap.contact >= 0 ? String(row[colMap.contact] || '').trim() : '',
                 note: colMap.note >= 0 ? String(row[colMap.note] || '').trim() : '',
                 managementNo: colMap.managementNo >= 0 ? String(row[colMap.managementNo] || '').trim() : '',
-                // v2.2.1追加 - 営業所・型式・交換フィルター
+                // v2.2.2変更 - 営業所・型式・交換フィルター
                 branch: colMap.branch >= 0 ? String(row[colMap.branch] || '').trim() : '',
-                equipType: colMap.model >= 0 ? String(row[colMap.model] || '').trim() : '',
+                equipType: colMap.equipType >= 0 ? String(row[colMap.equipType] || '').trim() : '',
                 filter: colMap.filter >= 0 ? String(row[colMap.filter] || '').trim() : ''
             };
             newCustomers.push(customer);
@@ -157,10 +167,10 @@ const CsvHandler = (() => {
             contact: -1,
             note: -1,
             managementNo: -1,
-            // v2.2.1追加 - 4項目
+            // v2.2.2変更 - 4項目
             prefecture: -1,    // 都道府県
             branch: -1,        // 営業所
-            model: -1,         // 型式
+            equipType: -1,     // 型式
             filter: -1         // 交換フィルター
         };
 
@@ -179,20 +189,20 @@ const CsvHandler = (() => {
             } else if (h.includes('管理') || h.includes('管理no') || h.includes('u管理')) {
                 if (map.managementNo === -1) map.managementNo = i;
             }
-            // v2.2.1追加 - 都道府県
-            if (map.prefecture === -1 && (h.includes('都道府県') || h.includes('prefecture') || h.includes('県'))) {
+            // v2.2.2変更 - 都道府県（独立if文で判定）
+            if (map.prefecture === -1 && (h.includes('都道府県') || h.includes('prefecture'))) {
                 map.prefecture = i;
             }
-            // v2.2.1追加 - 営業所
-            if (map.branch === -1 && (h.includes('営業所') || h.includes('branch') || h.includes('支店'))) {
+            // v2.2.2変更 - 営業所
+            if (map.branch === -1 && (h.includes('営業所') || h.includes('支店') || h.includes('branch'))) {
                 map.branch = i;
             }
-            // v2.2.1追加 - 型式（「型式」「型番」「タイプ」にマッチ、ただし「交換機種」は除外）
-            if (map.model === -1 && (h.includes('型式') || h.includes('型番') || h.includes('タイプ')) && !h.includes('交換')) {
-                map.model = i;
+            // v2.2.2変更 - 型式（「型式」にマッチ、「交換機種」は除外）
+            if (map.equipType === -1 && (h === '型式' || h.includes('型式')) && !h.includes('交換')) {
+                map.equipType = i;
             }
-            // v2.2.1追加 - 交換フィルター
-            if (map.filter === -1 && (h.includes('フィルター') || h.includes('filter') || h.includes('交換フィルター'))) {
+            // v2.2.2変更 - 交換フィルター
+            if (map.filter === -1 && (h.includes('フィルター') || h.includes('交換フィルター') || h.includes('filter'))) {
                 map.filter = i;
             }
         }
