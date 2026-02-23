@@ -154,10 +154,15 @@ const RouteOrder = (() => {
         const items = document.querySelectorAll('#roSortList .ro-item');
         const order = [...items].map(item => item.dataset.id);
 
+        // v2.2追加 - 保存後に区間エディタを開くためローカル変数に退避
+        const savedRouteId = editingRouteId;
+
         DataStorage.updateRouteOrder(editingRouteId, order);
         cancelEdit();
         RouteManager.updateRoutePanel();
         alert('✅ 訪問順を保存しました！');
+        // v2.2追加 - 保存後に区間道路種別設定を開く
+        setTimeout(() => showSegmentEditor(savedRouteId, order), 300);
     }
 
     // v2.2 - 編集をキャンセルする
@@ -167,5 +172,84 @@ const RouteOrder = (() => {
         if (modal) modal.remove();
     }
 
-    return { startEdit, saveOrder, cancelEdit };
+    // v2.2追加 - 区間道路種別エディタを表示する
+    function showSegmentEditor(routeId, order) {
+        if (!routeId || !order || order.length < 2) return;
+
+        const customers = DataStorage.getCustomers();
+        const segments = DataStorage.getSegments();
+        const routeSegments = segments[routeId] || {};
+
+        let html = '<div class="ro-modal-overlay" id="segmentEditorModal">';
+        html += '<div class="ro-modal">';
+        html += '<h3>🛣️ 区間の道路種別</h3>';
+        html += '<p class="ro-hint">各区間で「高速」「下道」を選択</p>';
+        html += '<div class="seg-list">';
+
+        for (let i = 0; i < order.length - 1; i++) {
+            const fromC = customers.find(c => c.id === order[i]);
+            const toC = customers.find(c => c.id === order[i + 1]);
+            if (!fromC || !toC) continue;
+
+            const segKey = `${order[i]}_${order[i + 1]}`;
+            const currentType = routeSegments[segKey] || 'general';
+
+            const fromName = (fromC.company || '不明').substring(0, 10);
+            const toName = (toC.company || '不明').substring(0, 10);
+
+            html += `<div class="seg-item">`;
+            html += `<div class="seg-label">${i + 1}. ${fromName} → ${toName}</div>`;
+            html += `<div class="seg-toggle">`;
+            html += `<button class="seg-btn ${currentType === 'general' ? 'seg-btn-active' : ''}" `;
+            html += `onclick="RouteOrder.setSegType('${segKey}','general',this)">🚗 下道</button>`;
+            html += `<button class="seg-btn ${currentType === 'highway' ? 'seg-btn-active' : ''}" `;
+            html += `onclick="RouteOrder.setSegType('${segKey}','highway',this)">🛣️ 高速</button>`;
+            html += `</div></div>`;
+        }
+
+        html += '</div>';
+        html += '<div class="ro-actions">';
+        html += '<button class="ro-btn ro-btn-cancel" onclick="RouteOrder.closeSegmentEditor()">閉じる</button>';
+        html += '<button class="ro-btn ro-btn-save" onclick="RouteOrder.saveSegments()">✅ 保存</button>';
+        html += '</div>';
+        html += '</div></div>';
+
+        // routeIdを保持
+        RouteOrder._segRouteId = routeId;
+        RouteOrder._segData = { ...routeSegments };
+
+        const existing = document.getElementById('segmentEditorModal');
+        if (existing) existing.remove();
+        document.body.insertAdjacentHTML('beforeend', html);
+    }
+
+    // v2.2追加 - 区間の道路種別を切り替える
+    function setSegType(segKey, type, btn) {
+        RouteOrder._segData[segKey] = type;
+        const parent = btn.parentElement;
+        parent.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('seg-btn-active'));
+        btn.classList.add('seg-btn-active');
+    }
+
+    // v2.2追加 - 区間データを保存する
+    function saveSegments() {
+        const routeId = RouteOrder._segRouteId;
+        if (!routeId) return;
+        const allSegments = DataStorage.getSegments();
+        allSegments[routeId] = RouteOrder._segData;
+        DataStorage.saveSegments(allSegments);
+        closeSegmentEditor();
+        alert('✅ 区間の道路種別を保存しました！');
+    }
+
+    // v2.2追加 - 区間エディタを閉じる
+    function closeSegmentEditor() {
+        const modal = document.getElementById('segmentEditorModal');
+        if (modal) modal.remove();
+    }
+
+    return {
+        startEdit, saveOrder, cancelEdit,
+        showSegmentEditor, setSegType, saveSegments, closeSegmentEditor
+    };
 })();
