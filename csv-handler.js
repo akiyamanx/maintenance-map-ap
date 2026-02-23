@@ -1,7 +1,8 @@
 // ============================================
-// メンテナンスマップ v2.0 - csv-handler.js
+// メンテナンスマップ v2.2.1 - csv-handler.js
 // CSV/Excelアップロード・パース・同一住所まとめ
 // v2.0新規作成 - 分割ファイル構成対応
+// v2.2.1変更 - 営業所・型式・フィルター・都道府県の検出追加
 // ============================================
 
 const CsvHandler = (() => {
@@ -99,7 +100,14 @@ const CsvHandler = (() => {
 
         for (const row of dataRows) {
             const company = colMap.company >= 0 ? String(row[colMap.company] || '').trim() : '';
-            const address = colMap.address >= 0 ? String(row[colMap.address] || '').trim() : '';
+            // v2.2.1変更 - 都道府県+住所を結合
+            let address = colMap.address >= 0 ? String(row[colMap.address] || '').trim() : '';
+            if (colMap.prefecture >= 0) {
+                const pref = String(row[colMap.prefecture] || '').trim();
+                if (pref && !address.startsWith(pref)) {
+                    address = pref + address;
+                }
+            }
 
             if (!company && !address) continue;
 
@@ -109,7 +117,11 @@ const CsvHandler = (() => {
                 phone: colMap.phone >= 0 ? String(row[colMap.phone] || '').trim() : '',
                 contact: colMap.contact >= 0 ? String(row[colMap.contact] || '').trim() : '',
                 note: colMap.note >= 0 ? String(row[colMap.note] || '').trim() : '',
-                managementNo: colMap.managementNo >= 0 ? String(row[colMap.managementNo] || '').trim() : ''
+                managementNo: colMap.managementNo >= 0 ? String(row[colMap.managementNo] || '').trim() : '',
+                // v2.2.1追加 - 営業所・型式・交換フィルター
+                branch: colMap.branch >= 0 ? String(row[colMap.branch] || '').trim() : '',
+                equipType: colMap.model >= 0 ? String(row[colMap.model] || '').trim() : '',
+                filter: colMap.filter >= 0 ? String(row[colMap.filter] || '').trim() : ''
             };
             newCustomers.push(customer);
         }
@@ -144,7 +156,12 @@ const CsvHandler = (() => {
             phone: -1,
             contact: -1,
             note: -1,
-            managementNo: -1
+            managementNo: -1,
+            // v2.2.1追加 - 4項目
+            prefecture: -1,    // 都道府県
+            branch: -1,        // 営業所
+            model: -1,         // 型式
+            filter: -1         // 交換フィルター
         };
 
         for (let i = 0; i < header.length; i++) {
@@ -159,8 +176,24 @@ const CsvHandler = (() => {
                 if (map.contact === -1) map.contact = i;
             } else if (h.includes('備考') || h.includes('情報') || h.includes('note') || h.includes('memo')) {
                 if (map.note === -1) map.note = i;
-            } else if (h.includes('管理') || h.includes('no') || h.includes('番号')) {
+            } else if (h.includes('管理') || h.includes('管理no') || h.includes('u管理')) {
                 if (map.managementNo === -1) map.managementNo = i;
+            }
+            // v2.2.1追加 - 都道府県
+            if (map.prefecture === -1 && (h.includes('都道府県') || h.includes('prefecture') || h.includes('県'))) {
+                map.prefecture = i;
+            }
+            // v2.2.1追加 - 営業所
+            if (map.branch === -1 && (h.includes('営業所') || h.includes('branch') || h.includes('支店'))) {
+                map.branch = i;
+            }
+            // v2.2.1追加 - 型式（「型式」「型番」「タイプ」にマッチ、ただし「交換機種」は除外）
+            if (map.model === -1 && (h.includes('型式') || h.includes('型番') || h.includes('タイプ')) && !h.includes('交換')) {
+                map.model = i;
+            }
+            // v2.2.1追加 - 交換フィルター
+            if (map.filter === -1 && (h.includes('フィルター') || h.includes('filter') || h.includes('交換フィルター'))) {
+                map.filter = i;
             }
         }
 

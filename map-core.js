@@ -1,7 +1,8 @@
 // ============================================
-// メンテナンスマップ v2.0 - map-core.js
+// メンテナンスマップ v2.2.1 - map-core.js
 // Google Maps初期化・ピン管理・ジオコーディング
 // v2.0新規作成 - 分割ファイル構成対応
+// v2.2.1変更 - ポップアップに営業所・型式・フィルター表示＋訪問順ドロップダウン追加
 // ============================================
 
 const MapCore = (() => {
@@ -269,6 +270,12 @@ const MapCore = (() => {
         }
         // v2.0.1追加 - 機種名
         if (customer.model) html += `<p>💧 ${customer.model}</p>`;
+        // v2.2.1追加 - 営業所
+        if (customer.branch) html += `<p>🏢 営業所: ${customer.branch}</p>`;
+        // v2.2.1追加 - 型式
+        if (customer.equipType) html += `<p>⚙️ 型式: ${customer.equipType}</p>`;
+        // v2.2.1追加 - 交換フィルター
+        if (customer.filter) html += `<p>🔧 フィルター: ${customer.filter}</p>`;
         if (route) html += `<p>🗺️ ${route.name}</p>`;
         html += `<p>${statusText[customer.status] || statusText.pending}</p>`;
         if (customer.appoDate) {
@@ -279,6 +286,22 @@ const MapCore = (() => {
         if (customer.note) html += `<p style="font-size:11px;color:#64748b;white-space:pre-wrap;">📝 ${customer.note}</p>`;
         // v2.0.1追加 - 追加情報
         if (customer.info) html += `<p style="font-size:11px;color:#64748b;">ℹ️ ${customer.info}</p>`;
+        // v2.2.1追加 - 訪問順ドロップダウン（ルート割当済みの場合のみ）
+        if (customer.routeId) {
+            const currentRoute = routes.find(r => r.id === customer.routeId);
+            const routeMembers = DataStorage.getCustomers().filter(c => c.routeId === customer.routeId);
+            const currentOrder = currentRoute && currentRoute.order ? currentRoute.order : [];
+            const currentIdx = currentOrder.indexOf(customer.id);
+            const currentNum = currentIdx >= 0 ? currentIdx + 1 : -1;
+            html += `<div class="info-visit-order">`;
+            html += `<span>🔢 訪問順:</span>`;
+            html += `<select class="visit-order-select" onchange="RouteOrder.setVisitOrder('${customer.routeId}','${customer.id}',this.value)">`;
+            html += `<option value="-1" ${currentNum === -1 ? 'selected' : ''}>未設定</option>`;
+            for (let i = 1; i <= routeMembers.length; i++) {
+                html += `<option value="${i}" ${currentNum === i ? 'selected' : ''}>${i}番</option>`;
+            }
+            html += `</select></div>`;
+        }
         html += `<div class="info-actions">`;
         html += `<button class="info-btn info-btn-edit" onclick="MapCore.openEdit('${customer.id}')">✏️ 編集</button>`;
         if (customer.phone) {

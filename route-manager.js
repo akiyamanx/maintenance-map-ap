@@ -1,7 +1,8 @@
 // ============================================
-// メンテナンスマップ v2.0 - route-manager.js
+// メンテナンスマップ v2.2.1 - route-manager.js
 // ルート管理・色分け・PDF出力・凡例
 // v2.0新規作成 - 分割ファイル構成対応
+// v2.2.1変更 - 🔢ボタン削除（ルートタブは確認専用に）
 // ============================================
 
 const RouteManager = (() => {
@@ -33,10 +34,7 @@ const RouteManager = (() => {
             html += `<span class="route-color-dot" style="background:${route.color}"></span>`;
             html += `<span>${route.name}</span>`;
             html += `<span class="route-count">${members.length}件</span>`;
-            // v2.2追加 - 訪問順編集ボタン（2件以上で表示）
-            if (members.length >= 2) {
-                html += `<button class="route-order-btn" onclick="event.stopPropagation();RouteOrder.startEdit('${route.id}')">🔢</button>`;
-            }
+            // v2.2.1変更 - 🔢ボタン削除（訪問順設定はポップアップから行う）
             // v2.2追加 - 距離計算ボタン（2件以上＋訪問順設定済みで表示）
             if (members.length >= 2 && route.order && route.order.length >= 2) {
                 html += `<button class="route-dist-btn" onclick="event.stopPropagation();RouteManager.calcDistance('${route.id}')">📏</button>`;
