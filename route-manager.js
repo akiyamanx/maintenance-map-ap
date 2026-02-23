@@ -37,6 +37,10 @@ const RouteManager = (() => {
             if (members.length >= 2) {
                 html += `<button class="route-order-btn" onclick="event.stopPropagation();RouteOrder.startEdit('${route.id}')">🔢</button>`;
             }
+            // v2.2追加 - 距離計算ボタン（2件以上＋訪問順設定済みで表示）
+            if (members.length >= 2 && route.order && route.order.length >= 2) {
+                html += `<button class="route-dist-btn" onclick="event.stopPropagation();RouteManager.calcDistance('${route.id}')">📏</button>`;
+            }
             html += `</div>`;
 
             if (members.length > 0) {
@@ -298,9 +302,65 @@ const RouteManager = (() => {
         summaryEl.innerHTML = html;
     }
 
+    // v2.2追加 - ルートの走行距離を計算して結果を表示する
+    async function calcDistance(routeId) {
+        const loading = document.getElementById('loading');
+        loading.style.display = 'flex';
+        document.getElementById('loadingProgress').textContent = '走行距離計算中...';
+
+        try {
+            const result = await DistanceCalc.calcRouteDistance(routeId);
+
+            loading.style.display = 'none';
+
+            // 結果をalertで表示＋精算書に反映するか確認
+            const routes = DataStorage.getRoutes();
+            const route = routes.find(r => r.id === routeId);
+            const routeName = route ? route.name : routeId;
+
+            let msg = `📏 ${routeName} の走行距離\n\n`;
+            msg += `総距離: ${result.totalKm}km\n`;
+            msg += `  🚗 下道: ${result.generalKm}km\n`;
+            msg += `  🛣️ 高速: ${result.highwayKm}km\n\n`;
+            msg += `--- 区間詳細 ---\n`;
+            result.segments.forEach((s, i) => {
+                const icon = s.type === 'highway' ? '🛣️' : '🚗';
+                msg += `${i + 1}. ${icon} ${s.km}km (${s.duration})\n`;
+            });
+            msg += `\n精算書に反映しますか？`;
+
+            if (confirm(msg)) {
+                applyDistanceToExpense(result.totalKm);
+            }
+        } catch (err) {
+            loading.style.display = 'none';
+            alert('❌ 距離計算に失敗しました\n' + err.message);
+        }
+    }
+
+    // v2.2追加 - 計算した距離を精算書フォームに反映する
+    function applyDistanceToExpense(totalKm) {
+        // 精算書タブに切り替え
+        switchTab('expense');
+        ExpenseForm.init();
+
+        // 最初の行の走行距離に値を設定
+        setTimeout(() => {
+            const firstRow = document.querySelector('.exp-row');
+            if (firstRow) {
+                const distInput = firstRow.querySelector('.exp-distance');
+                if (distInput) {
+                    distInput.value = totalKm;
+                    ExpenseForm.updateGas(distInput);
+                }
+            }
+        }, 200);
+    }
+
     // v2.0 - 公開API
     return {
         updateRoutePanel, toggleRouteSection,
-        drawRouteLines, exportPDF, updateSummary
+        drawRouteLines, exportPDF, updateSummary,
+        calcDistance
     };
 })();
