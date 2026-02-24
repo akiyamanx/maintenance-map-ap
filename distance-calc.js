@@ -1,8 +1,8 @@
 // ============================================
-// メンテナンスマップ v2.2.1 - distance-calc.js
+// メンテナンスマップ v2.2.3 - distance-calc.js
 // 走行距離計算モジュール（Directions API使用）
 // v2.2新規作成
-// v2.2.1変更 - 高速/下道モード選択対応
+// v2.2.3変更 - segmentChoices（区間別設定）を直接受け取る
 // ============================================
 
 const DistanceCalc = (() => {
@@ -32,10 +32,9 @@ const DistanceCalc = (() => {
         });
     }
 
-    // v2.2 - ルート全体の走行距離を計算する
-    // v2.2.1変更 - roadType引数追加（'general' | 'highway' | 'segment'）
-    // homeAddress（出発地）→ 訪問順の各顧客 → homeAddress（帰着）
-    async function calcRouteDistance(routeId, roadType) {
+    // v2.2.3変更 - ルート全体の走行距離を計算する
+    // 第2引数: segmentChoices = { "fromId_toId": "general"|"highway", ... }
+    async function calcRouteDistance(routeId, segmentChoices) {
         const routes = DataStorage.getRoutes();
         const route = routes.find(r => r.id === routeId);
         if (!route) throw new Error('ルートが見つかりません');
@@ -63,9 +62,8 @@ const DistanceCalc = (() => {
         const homeAddress = settings.homeAddress;
         if (!homeAddress) throw new Error('設定で自宅住所（出発点）を登録してください');
 
-        // 区間データ取得（segmentモード時のみ使用）
-        const allSegments = DataStorage.getSegments();
-        const routeSegments = allSegments[routeId] || {};
+        // v2.2.3 - segmentChoicesが渡されなかった場合のフォールバック
+        const choices = segmentChoices || {};
 
         // 全ポイントリスト: 自宅 → 各顧客 → 自宅
         const points = [];
@@ -83,23 +81,10 @@ const DistanceCalc = (() => {
             const from = points[i];
             const to = points[i + 1];
 
-            // v2.2.1変更 - roadTypeに応じてavoidHighwaysを決定
-            let avoidHighways;
-            if (roadType === 'general') {
-                // 下道のみ：全区間で高速を回避
-                avoidHighways = true;
-            } else if (roadType === 'highway') {
-                // 高速OK：全区間で高速を許可
-                avoidHighways = false;
-            } else {
-                // segmentモード（従来動作）：区間ごとの設定に従う
-                const segKey = `${from.id}_${to.id}`;
-                const segType = routeSegments[segKey] || 'general';
-                avoidHighways = (segType === 'general');
-            }
-
-            // v2.2.1変更 - 表示用の区間種別
-            const displayType = avoidHighways ? 'general' : 'highway';
+            // v2.2.3 - segmentChoicesから区間の道路種別を取得
+            const segKey = `${from.id}_${to.id}`;
+            const segType = choices[segKey] || 'general';
+            const avoidHighways = (segType === 'general');
 
             // Directions API呼び出し（レート制限対策で500ms間隔）
             if (i > 0) await sleep(500);
@@ -109,20 +94,20 @@ const DistanceCalc = (() => {
                 const seg = {
                     from: from.address.substring(0, 20),
                     to: to.address.substring(0, 20),
-                    type: displayType,
+                    type: segType,
                     km: result.distanceKm,
                     duration: result.durationText
                 };
                 segments.push(seg);
                 totalKm += result.distanceKm;
-                if (displayType === 'highway') highwayKm += result.distanceKm;
+                if (segType === 'highway') highwayKm += result.distanceKm;
                 else generalKm += result.distanceKm;
             } catch (err) {
                 console.warn(`区間距離計算失敗: ${from.address} → ${to.address}`, err);
                 segments.push({
                     from: from.address.substring(0, 20),
                     to: to.address.substring(0, 20),
-                    type: displayType,
+                    type: segType,
                     km: 0,
                     duration: '計算失敗',
                     error: true
@@ -130,7 +115,7 @@ const DistanceCalc = (() => {
             }
         }
 
-        return { totalKm, highwayKm, generalKm, segments, roadType };
+        return { totalKm, highwayKm, generalKm, segments };
     }
 
     // v2.2 - 待機関数

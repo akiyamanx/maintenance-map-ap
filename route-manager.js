@@ -1,9 +1,10 @@
 // ============================================
-// メンテナンスマップ v2.2.2 - route-manager.js
+// メンテナンスマップ v2.2.3 - route-manager.js
 // ルート管理・色分け・PDF出力・凡例
 // v2.0新規作成 - 分割ファイル構成対応
 // v2.2.1変更 - 🔢ボタン削除（ルートタブは確認専用に）
 // v2.2.2変更 - 距離計算に高速/下道選択ダイアログ追加
+// v2.2.3変更 - 区間別の高速/下道選択UIに変更
 // ============================================
 
 const RouteManager = (() => {
@@ -96,7 +97,6 @@ const RouteManager = (() => {
         const legendEl = document.getElementById('legend');
         const itemsEl = document.getElementById('legendItems');
 
-        // v2.0 - ルートに顧客がいる場合のみ表示
         const activeRoutes = routes.filter(r => customers.some(c => c.routeId === r.id));
 
         if (activeRoutes.length === 0) {
@@ -113,7 +113,6 @@ const RouteManager = (() => {
             html += `</div>`;
         });
 
-        // v2.0 - ステータス凡例
         html += `<div style="border-top:1px solid #e2e8f0;margin:6px 0;"></div>`;
         html += `<div class="legend-item"><span class="legend-color" style="background:#ea4335"></span><span>未アポ</span></div>`;
         html += `<div class="legend-item"><span class="legend-color" style="background:#34a853"></span><span>アポ済み</span></div>`;
@@ -125,7 +124,6 @@ const RouteManager = (() => {
 
     // v2.0 - ルート線を地図に描画
     function drawRouteLines() {
-        // v2.0 - 既存の線をクリア
         polylines.forEach(p => p.setMap(null));
         polylines = [];
 
@@ -174,7 +172,6 @@ const RouteManager = (() => {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('p', 'mm', 'a4');
 
-        // v2.0 - フォント設定（日本語対応はnoto-font.jsがあれば）
         const today = new Date().toLocaleDateString('ja-JP');
 
         doc.setFontSize(16);
@@ -182,7 +179,6 @@ const RouteManager = (() => {
         doc.setFontSize(10);
         doc.text(`出力日: ${today}`, 14, 28);
 
-        // v2.0 - ルートごとにテーブル出力
         let startY = 35;
 
         for (const route of routes) {
@@ -216,14 +212,12 @@ const RouteManager = (() => {
 
             startY = doc.lastAutoTable.finalY + 10;
 
-            // v2.0 - ページ跨ぎ対応
             if (startY > 260) {
                 doc.addPage();
                 startY = 20;
             }
         }
 
-        // v2.0 - 未割当
         const unassigned = customers.filter(c => !c.routeId);
         if (unassigned.length > 0) {
             doc.setFontSize(12);
@@ -269,7 +263,6 @@ const RouteManager = (() => {
 
         let html = '';
 
-        // v2.0 - 全体集計
         const appointed = customers.filter(c => c.status === 'appointed').length;
         const completed = customers.filter(c => c.status === 'completed').length;
         const pending = customers.filter(c => c.status === 'pending' || !c.status).length;
@@ -282,7 +275,6 @@ const RouteManager = (() => {
         html += `<div class="summary-row"><span>⚪ 完了</span><span class="summary-value">${completed}件</span></div>`;
         html += `</div>`;
 
-        // v2.0 - ルート別集計
         for (const route of routes) {
             const members = customers.filter(c => c.routeId === route.id);
             if (members.length === 0) continue;
@@ -301,77 +293,190 @@ const RouteManager = (() => {
         summaryEl.innerHTML = html;
     }
 
-    // v2.2.2追加 - 高速/下道選択ダイアログを表示
-    function showRoadTypeDialog(routeId) {
+    // v2.2.3追加 - 区間別の高速/下道選択ダイアログを表示
+    function showSegmentDialog(routeId, points, savedSegments) {
         return new Promise((resolve) => {
             // 既存ダイアログがあれば削除
-            const old = document.getElementById('roadTypeDialog');
+            const old = document.getElementById('segmentDialog');
             if (old) old.remove();
 
+            // 区間リストを構築
+            const segList = [];
+            for (let i = 0; i < points.length - 1; i++) {
+                const segKey = `${points[i].id}_${points[i + 1].id}`;
+                const saved = savedSegments[segKey] || 'general';
+                segList.push({
+                    key: segKey,
+                    fromLabel: points[i].label,
+                    toLabel: points[i + 1].label,
+                    type: saved
+                });
+            }
+
             const overlay = document.createElement('div');
-            overlay.id = 'roadTypeDialog';
+            overlay.id = 'segmentDialog';
             overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:10000;';
 
             const dialog = document.createElement('div');
-            dialog.style.cssText = 'background:#fff;border-radius:12px;padding:24px;max-width:320px;width:90%;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.3);';
+            dialog.style.cssText = 'background:#fff;border-radius:12px;padding:20px;max-width:380px;width:92%;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 4px 20px rgba(0,0,0,0.3);';
 
-            dialog.innerHTML = `
-                <div style="font-size:18px;font-weight:bold;margin-bottom:16px;">📏 距離計算モード</div>
-                <div style="font-size:14px;color:#666;margin-bottom:20px;">ルートの計算方法を選んでください</div>
-                <div style="display:flex;flex-direction:column;gap:10px;">
-                    <button id="rdGeneral" style="padding:14px;border:2px solid #4CAF50;border-radius:8px;background:#E8F5E9;font-size:16px;cursor:pointer;font-weight:bold;">
-                        🚗 下道のみ
-                    </button>
-                    <button id="rdHighway" style="padding:14px;border:2px solid #2196F3;border-radius:8px;background:#E3F2FD;font-size:16px;cursor:pointer;font-weight:bold;">
-                        🛣️ 高速あり
-                    </button>
-                    <button id="rdCancel" style="padding:10px;border:1px solid #ccc;border-radius:8px;background:#f5f5f5;font-size:14px;cursor:pointer;color:#666;">
+            // v2.2.3 - ヘッダー
+            let headerHtml = `
+                <div style="font-size:18px;font-weight:bold;margin-bottom:4px;">📏 区間別 道路選択</div>
+                <div style="font-size:13px;color:#666;margin-bottom:12px;">各区間をタップで 🚗下道 ⇔ 🛣️高速 切替</div>
+            `;
+
+            // v2.2.3 - 区間リスト（スクロール可能）
+            let listHtml = `<div style="overflow-y:auto;flex:1;margin-bottom:12px;">`;
+            segList.forEach((seg, idx) => {
+                const isHw = seg.type === 'highway';
+                const bg = isHw ? '#E3F2FD' : '#E8F5E9';
+                const border = isHw ? '#2196F3' : '#4CAF50';
+                const icon = isHw ? '🛣️' : '🚗';
+                const label = isHw ? '高速' : '下道';
+
+                listHtml += `
+                    <div id="seg_${idx}" data-key="${seg.key}" data-type="${seg.type}"
+                         onclick="RouteManager._toggleSegType(${idx})"
+                         style="display:flex;align-items:center;padding:10px 12px;margin-bottom:6px;
+                                border:2px solid ${border};border-radius:8px;background:${bg};
+                                cursor:pointer;user-select:none;transition:all 0.2s;">
+                        <span style="font-size:20px;margin-right:10px;" id="segIcon_${idx}">${icon}</span>
+                        <div style="flex:1;min-width:0;">
+                            <div style="font-size:13px;font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                                ${seg.fromLabel}
+                            </div>
+                            <div style="font-size:11px;color:#888;">↓</div>
+                            <div style="font-size:13px;font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                                ${seg.toLabel}
+                            </div>
+                        </div>
+                        <span style="font-size:14px;font-weight:bold;margin-left:8px;" id="segLabel_${idx}">${label}</span>
+                    </div>
+                `;
+            });
+            listHtml += `</div>`;
+
+            // v2.2.3 - ボタン
+            let btnHtml = `
+                <div style="display:flex;gap:8px;">
+                    <button id="segCancel" style="flex:1;padding:12px;border:1px solid #ccc;border-radius:8px;background:#f5f5f5;font-size:14px;cursor:pointer;color:#666;">
                         キャンセル
+                    </button>
+                    <button id="segCalc" style="flex:2;padding:12px;border:none;border-radius:8px;background:#1976D2;color:#fff;font-size:16px;font-weight:bold;cursor:pointer;">
+                        📏 計算する
                     </button>
                 </div>
             `;
 
+            dialog.innerHTML = headerHtml + listHtml + btnHtml;
             overlay.appendChild(dialog);
             document.body.appendChild(overlay);
 
-            // ボタンイベント
-            document.getElementById('rdGeneral').onclick = () => { overlay.remove(); resolve('general'); };
-            document.getElementById('rdHighway').onclick = () => { overlay.remove(); resolve('highway'); };
-            document.getElementById('rdCancel').onclick = () => { overlay.remove(); resolve(null); };
-            // 背景クリックでキャンセル
+            // イベント設定
+            document.getElementById('segCancel').onclick = () => { overlay.remove(); resolve(null); };
+            document.getElementById('segCalc').onclick = () => {
+                const result = {};
+                segList.forEach((seg, idx) => {
+                    const el = document.getElementById(`seg_${idx}`);
+                    result[seg.key] = el.dataset.type;
+                });
+                overlay.remove();
+                resolve(result);
+            };
             overlay.onclick = (e) => { if (e.target === overlay) { overlay.remove(); resolve(null); } };
         });
     }
 
-    // v2.2.2変更 - ルートの走行距離を計算して結果を表示する（選択ダイアログ付き）
-    async function calcDistance(routeId) {
-        // v2.2.2追加 - まず高速/下道を選択
-        const roadType = await showRoadTypeDialog(routeId);
-        if (!roadType) return; // キャンセル
+    // v2.2.3追加 - 区間の道路種別をトグル切替
+    function _toggleSegType(idx) {
+        const el = document.getElementById(`seg_${idx}`);
+        const icon = document.getElementById(`segIcon_${idx}`);
+        const label = document.getElementById(`segLabel_${idx}`);
 
+        if (el.dataset.type === 'general') {
+            el.dataset.type = 'highway';
+            el.style.background = '#E3F2FD';
+            el.style.borderColor = '#2196F3';
+            icon.textContent = '🛣️';
+            label.textContent = '高速';
+        } else {
+            el.dataset.type = 'general';
+            el.style.background = '#E8F5E9';
+            el.style.borderColor = '#4CAF50';
+            icon.textContent = '🚗';
+            label.textContent = '下道';
+        }
+    }
+
+    // v2.2.3変更 - 区間別選択→距離計算→結果表示
+    async function calcDistance(routeId) {
+        const routes = DataStorage.getRoutes();
+        const route = routes.find(r => r.id === routeId);
+        if (!route) { alert('ルートが見つかりません'); return; }
+
+        const customers = DataStorage.getCustomers();
+        const members = customers.filter(c => c.routeId === routeId);
+
+        // 訪問順で並べ替え
+        const ordered = [];
+        if (route.order && route.order.length > 0) {
+            for (const cid of route.order) {
+                const found = members.find(m => m.id === cid);
+                if (found) ordered.push(found);
+            }
+            for (const m of members) {
+                if (!ordered.find(o => o.id === m.id)) ordered.push(m);
+            }
+        } else {
+            ordered.push(...members);
+        }
+
+        // 自宅住所チェック
+        const settings = DataStorage.getSettings();
+        const homeAddress = settings.homeAddress;
+        if (!homeAddress) { alert('設定で自宅住所（出発点）を登録してください'); return; }
+
+        // v2.2.3 - ポイントリスト（表示名付き）
+        const points = [];
+        points.push({ id: 'home_start', address: homeAddress, label: '🏠 自宅（出発）' });
+        ordered.forEach(m => {
+            const name = (m.company || '不明').substring(0, 15);
+            points.push({ id: m.id, address: m.address, label: name });
+        });
+        points.push({ id: 'home_end', address: homeAddress, label: '🏠 自宅（帰着）' });
+
+        // v2.2.3 - 保存済み区間設定を取得
+        const allSegments = DataStorage.getSegments();
+        const savedSegments = allSegments[routeId] || {};
+
+        // v2.2.3 - 区間選択ダイアログ
+        const segmentChoices = await showSegmentDialog(routeId, points, savedSegments);
+        if (!segmentChoices) return;
+
+        // v2.2.3 - 選択結果を保存（次回用）
+        allSegments[routeId] = segmentChoices;
+        DataStorage.saveSegments(allSegments);
+
+        // 計算実行
         const loading = document.getElementById('loading');
         loading.style.display = 'flex';
-        const modeLabel = roadType === 'highway' ? '🛣️ 高速あり' : '🚗 下道のみ';
-        document.getElementById('loadingProgress').textContent = `走行距離計算中...（${modeLabel}）`;
+        document.getElementById('loadingProgress').textContent = '走行距離計算中...';
 
         try {
-            // v2.2.2変更 - roadTypeを渡す
-            const result = await DistanceCalc.calcRouteDistance(routeId, roadType);
-
+            // v2.2.3 - segmentChoicesを直接渡す
+            const result = await DistanceCalc.calcRouteDistance(routeId, segmentChoices);
             loading.style.display = 'none';
 
-            // 結果をalertで表示＋精算書に反映するか確認
-            const routes = DataStorage.getRoutes();
-            const route = routes.find(r => r.id === routeId);
-            const routeName = route ? route.name : routeId;
-
-            let msg = `📏 ${routeName} の走行距離\n`;
-            msg += `（${modeLabel}で計算）\n\n`;
-            msg += `総距離: ${result.totalKm}km\n\n`;
+            let msg = `📏 ${route.name} の走行距離\n\n`;
+            msg += `総距離: ${result.totalKm}km\n`;
+            msg += `  🚗 下道: ${result.generalKm}km\n`;
+            msg += `  🛣️ 高速: ${result.highwayKm}km\n\n`;
             msg += `--- 区間詳細 ---\n`;
             result.segments.forEach((s, i) => {
                 const icon = s.type === 'highway' ? '🛣️' : '🚗';
                 msg += `${i + 1}. ${icon} ${s.km}km (${s.duration})\n`;
+                msg += `   ${s.from} → ${s.to}\n`;
             });
             msg += `\n精算書に反映しますか？`;
 
@@ -384,13 +489,11 @@ const RouteManager = (() => {
         }
     }
 
-    // v2.2追加 - 計算した距離を精算書フォームに反映する
+    // v2.2追加 - 計算した距離を精算書フォームに反映
     function applyDistanceToExpense(totalKm) {
-        // 精算書タブに切り替え
         switchTab('expense');
         ExpenseForm.init();
 
-        // 最初の行の走行距離に値を設定
         setTimeout(() => {
             const firstRow = document.querySelector('.exp-row');
             if (firstRow) {
@@ -407,6 +510,6 @@ const RouteManager = (() => {
     return {
         updateRoutePanel, toggleRouteSection,
         drawRouteLines, exportPDF, updateSummary,
-        calcDistance
+        calcDistance, _toggleSegType
     };
 })();
