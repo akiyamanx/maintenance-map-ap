@@ -326,9 +326,9 @@ const RouteManager = (() => {
             }
         }
 
-        // 上段: 地区名、下段: 会社名
-        const areaLine = areas.join('・');
-        const companyLine = companies.join('・');
+        // 上段: 地区名、下段: 会社名（→で区切ってルート順を表現）
+        const areaLine = areas.join('→');
+        const companyLine = companies.join('→');
         return areaLine + '\n' + companyLine;
     }
 
