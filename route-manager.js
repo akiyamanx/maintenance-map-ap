@@ -1,9 +1,10 @@
 // ============================================
-// メンテナンスマップ v2.2.3 - route-manager.js
+// メンテナンスマップ v2.2.4 - route-manager.js
 // ルート管理・色分け・PDF出力・凡例
 // v2.0新規作成 - 分割ファイル構成対応
 // v2.2.1変更 - 🔢ボタン削除（ルートタブは確認専用に）
 // v2.2.3変更 - 区間別の高速/下道選択対応（UIはsegment-dialog.jsに分離）
+// v2.2.4追加 - 精算書への行先自動反映（地区名＋会社名）
 // ============================================
 
 const RouteManager = (() => {
@@ -282,6 +283,55 @@ const RouteManager = (() => {
         summaryEl.innerHTML = html;
     }
 
+    // v2.2.4追加 - 住所から都道府県+市区町村を抽出
+    function extractArea(address) {
+        if (!address) return '';
+        // 都道府県パターン: 東京都、北海道、大阪府、京都府、○○県
+        // 市区町村パターン: ○○市、○○区、○○町、○○村、○○郡○○町
+        const match = address.match(
+            /^(東京都|北海道|(?:大阪|京都)府|.{2,3}県)((?:[^市区町村]+?郡)?(?:[^市区町村]+?[市区町村]))/
+        );
+        if (match) {
+            const pref = match[1];
+            const city = match[2];
+            // 東京23区は「港区」のように区名だけだと分かりにくいので「東京都港区」にする
+            return pref + city;
+        }
+        // マッチしない場合は先頭から適当に切り出す
+        return address.substring(0, 10);
+    }
+
+    // v2.2.4追加 - ルート顧客から行先テキストを組み立て
+    // フォーマット: 上段=地区名（重複除外・中黒区切り）、下段=会社名（ルート順・中黒区切り）
+    function buildDestinationText(orderedCustomers) {
+        // 地区名を抽出（重複除外、順序維持）
+        const areas = [];
+        const areaSet = new Set();
+        for (const c of orderedCustomers) {
+            const area = extractArea(c.address);
+            if (area && !areaSet.has(area)) {
+                areaSet.add(area);
+                areas.push(area);
+            }
+        }
+
+        // 会社名をルート順に列挙（重複除外）
+        const companies = [];
+        const compSet = new Set();
+        for (const c of orderedCustomers) {
+            const name = (c.company || '').trim();
+            if (name && !compSet.has(name)) {
+                compSet.add(name);
+                companies.push(name);
+            }
+        }
+
+        // 上段: 地区名、下段: 会社名
+        const areaLine = areas.join('・');
+        const companyLine = companies.join('・');
+        return areaLine + '\n' + companyLine;
+    }
+
     // v2.2.3変更 - 区間別選択→距離計算→結果表示
     async function calcDistance(routeId) {
         const routes = DataStorage.getRoutes();
@@ -351,7 +401,9 @@ const RouteManager = (() => {
             msg += `\n精算書に反映しますか？`;
 
             if (confirm(msg)) {
-                applyDistanceToExpense(result.totalKm);
+                // v2.2.4変更 - 行先テキストも一緒に渡す
+                const destText = buildDestinationText(ordered);
+                applyDistanceToExpense(result.totalKm, destText);
             }
         } catch (err) {
             loading.style.display = 'none';
@@ -359,11 +411,16 @@ const RouteManager = (() => {
         }
     }
 
-    // v2.2追加 - 計算した距離を精算書フォームに反映
-    function applyDistanceToExpense(totalKm) {
+    // v2.2.4変更 - 距離＋行先を精算書フォームに反映
+    function applyDistanceToExpense(totalKm, destText) {
         switchTab('expense');
         ExpenseForm.init();
         setTimeout(() => {
+            // v2.2.4追加 - 行先テキストを自動入力
+            if (destText) {
+                ExpenseForm.setDestination(destText);
+            }
+            // 走行距離を1行目に反映
             const firstRow = document.querySelector('.exp-row');
             if (firstRow) {
                 const distInput = firstRow.querySelector('.exp-distance');

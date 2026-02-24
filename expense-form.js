@@ -1,9 +1,10 @@
 // ============================================
-// メンテナンスマップ v2.2 - expense-form.js
+// メンテナンスマップ v2.2.4 - expense-form.js
 // 交通費精算書フォーム・下書き管理
 // v2.1新規作成 - CULOchanSEISANshoから統合
 // PDF生成はexpense-pdf.jsに委譲
 // v2.2改修 - ETC明細読込ボタン追加
+// v2.2.4追加 - setDestination()で行先自動入力対応
 // ============================================
 
 const ExpenseForm = (() => {
@@ -291,6 +292,14 @@ const ExpenseForm = (() => {
         return rows;
     }
 
+    // v2.2.4追加 - 行先テキストを外部から設定（距離計算→精算書反映で使用）
+    function setDestination(text) {
+        const el = document.getElementById('expDestination');
+        if (el) {
+            el.value = text;
+        }
+    }
+
     // v2.1 - 下書き保存
     function saveDraft() {
         const draft = {
@@ -409,6 +418,7 @@ const ExpenseForm = (() => {
     return {
         init, addRow, deleteRow, updateGas, calcTotals,
         saveDraft, loadDraft, deleteDraft, loadDraftList,
-        clearAll, generatePDF
+        clearAll, generatePDF,
+        setDestination  // v2.2.4追加
     };
 })();
