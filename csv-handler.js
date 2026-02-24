@@ -18,7 +18,7 @@ const CsvHandler = (() => {
         if (ext === 'csv') {
             readCSV(file);
         } else if (ext === 'xlsx' || ext === 'xls') {
-            readExcel(file);
+            if (typeof XLSX === "undefined") { alert("⚠️ SheetJSライブラリが読み込まれていません。ページをリロードしてください。"); return; } readExcel(file);
         } else {
             alert('CSV, XLSX, XLS ファイルを選択してください。');
         }
