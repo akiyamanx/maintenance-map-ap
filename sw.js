@@ -1,13 +1,14 @@
 // ============================================
-// メンテナンスマップ v2.2.2 - sw.js
+// メンテナンスマップ v2.2.3 - sw.js
 // Service Worker（PWAオフライン対応）
 // v2.0新規作成
 // v2.2 キャッシュバージョン更新、新規ファイル追加
 // v2.2.1 キャッシュバージョン更新
 // v2.2.2 キャッシュバージョン更新
+// v2.2.3 CDNリソースのキャッシュ対応修正（Excel読込エラー修正）
 // ============================================
 
-const CACHE_NAME = 'maintenance-map-v2.2.2';
+const CACHE_NAME = 'maintenance-map-v2.2.3';
 const urlsToCache = [
     './',
     './index.html',
@@ -50,14 +51,15 @@ self.addEventListener('activate', (event) => {
 
 // v2.0 - フェッチ（ネットワーク優先、フォールバックでキャッシュ）
 self.addEventListener('fetch', (event) => {
-    // v2.0 - Google Maps APIなど外部リソースはキャッシュしない
+    // v2.2.3修正 - Google Maps APIはキャッシュ不要（動的リクエストのため）
     if (event.request.url.includes('googleapis.com') ||
-        event.request.url.includes('gstatic.com') ||
-        event.request.url.includes('cdnjs.cloudflare.com')) {
+        event.request.url.includes('gstatic.com')) {
         event.respondWith(fetch(event.request));
         return;
     }
 
+    // v2.2.3修正 - CDNリソース（SheetJS等）はネットワーク優先＋キャッシュフォールバック
+    // 以前はfetchのみでキャッシュなしだったため、読み込み失敗時にエラーになっていた
     event.respondWith(
         fetch(event.request)
             .then((response) => {
