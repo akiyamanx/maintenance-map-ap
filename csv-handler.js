@@ -1,9 +1,11 @@
 // ============================================
-// メンテナンスマップ v2.2.2 - csv-handler.js
+// メンテナンスマップ v2.2.4 - csv-handler.js
 // CSV/Excelアップロード・パース・同一住所まとめ
 // v2.0新規作成 - 分割ファイル構成対応
 // v2.2.1変更 - 営業所・型式・フィルター・都道府県の検出追加
 // v2.2.2変更 - ヘッダー行自動検出改善、mapキー名をequipTypeに統一
+// v2.2.4修正 - 「設置先TEL」が会社名列に誤判定される問題を修正
+//              電話・担当者・備考を先にチェックする判定順序に変更
 // ============================================
 
 const CsvHandler = (() => {
@@ -158,7 +160,8 @@ const CsvHandler = (() => {
         }
     }
 
-    // v2.0 - ヘッダーからカラム位置を自動検出
+    // v2.2.4修正 - ヘッダーからカラム位置を自動検出
+    // 判定順序を変更: 電話・担当者・備考を先にチェック（「設置先TEL」誤判定対策）
     function detectColumns(header) {
         const map = {
             company: -1,
@@ -167,28 +170,40 @@ const CsvHandler = (() => {
             contact: -1,
             note: -1,
             managementNo: -1,
-            // v2.2.2変更 - 4項目
-            prefecture: -1,    // 都道府県
-            branch: -1,        // 営業所
-            equipType: -1,     // 型式
-            filter: -1         // 交換フィルター
+            prefecture: -1,
+            branch: -1,
+            equipType: -1,
+            filter: -1
         };
 
         for (let i = 0; i < header.length; i++) {
             const h = (header[i] || '').toLowerCase();
-            if (h.includes('会社') || h.includes('設置先') || h.includes('名称') || h.includes('company')) {
-                if (map.company === -1) map.company = i;
-            } else if (h.includes('住所') || h.includes('address') || h.includes('所在地')) {
-                if (map.address === -1) map.address = i;
-            } else if (h.includes('電話') || h.includes('tel') || h.includes('phone')) {
+
+            // v2.2.4修正 - 電話を最優先でチェック（「設置先TEL」対策）
+            if (h.includes('電話') || h.includes('tel') || h.includes('phone')) {
                 if (map.phone === -1) map.phone = i;
-            } else if (h.includes('担当') || h.includes('contact') || h.includes('受付')) {
+            }
+            // v2.2.4修正 - 担当者も先にチェック（「受付担当者」対策）
+            else if (h.includes('担当') || h.includes('contact') || h.includes('受付')) {
                 if (map.contact === -1) map.contact = i;
-            } else if (h.includes('備考') || h.includes('情報') || h.includes('note') || h.includes('memo')) {
+            }
+            // v2.2.4修正 - 備考・情報も先にチェック（「設置先情報」対策）
+            else if (h.includes('備考') || h.includes('情報') || h.includes('note') || h.includes('memo')) {
                 if (map.note === -1) map.note = i;
-            } else if (h.includes('管理') || h.includes('管理no') || h.includes('u管理')) {
+            }
+            // 会社名（上の条件に引っかからなかった「設置先」がここに来る）
+            else if (h.includes('会社') || h.includes('設置先') || h.includes('名称') || h.includes('company')) {
+                if (map.company === -1) map.company = i;
+            }
+            // 住所
+            else if (h.includes('住所') || h.includes('address') || h.includes('所在地')) {
+                if (map.address === -1) map.address = i;
+            }
+            // 管理番号
+            else if (h.includes('管理') || h.includes('管理no') || h.includes('u管理')) {
                 if (map.managementNo === -1) map.managementNo = i;
             }
+
             // v2.2.2変更 - 都道府県（独立if文で判定）
             if (map.prefecture === -1 && (h.includes('都道府県') || h.includes('prefecture'))) {
                 map.prefecture = i;
