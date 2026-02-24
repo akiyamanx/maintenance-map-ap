@@ -3,8 +3,7 @@
 // ルート管理・色分け・PDF出力・凡例
 // v2.0新規作成 - 分割ファイル構成対応
 // v2.2.1変更 - 🔢ボタン削除（ルートタブは確認専用に）
-// v2.2.2変更 - 距離計算に高速/下道選択ダイアログ追加
-// v2.2.3変更 - 区間別の高速/下道選択UIに変更
+// v2.2.3変更 - 区間別の高速/下道選択対応（UIはsegment-dialog.jsに分離）
 // ============================================
 
 const RouteManager = (() => {
@@ -36,7 +35,6 @@ const RouteManager = (() => {
             html += `<span class="route-color-dot" style="background:${route.color}"></span>`;
             html += `<span>${route.name}</span>`;
             html += `<span class="route-count">${members.length}件</span>`;
-            // v2.2.1変更 - 🔢ボタン削除（訪問順設定はポップアップから行う）
             // v2.2追加 - 距離計算ボタン（2件以上＋訪問順設定済みで表示）
             if (members.length >= 2 && route.order && route.order.length >= 2) {
                 html += `<button class="route-dist-btn" onclick="event.stopPropagation();RouteManager.calcDistance('${route.id}')">📏</button>`;
@@ -191,11 +189,8 @@ const RouteManager = (() => {
             startY += 3;
 
             const tableData = members.map((m, idx) => [
-                idx + 1,
-                m.company || '',
-                m.address || '',
-                m.phone || '',
-                m.contact || '',
+                idx + 1, m.company || '', m.address || '',
+                m.phone || '', m.contact || '',
                 m.unitCount > 1 ? `${m.unitCount}台` : '',
                 m.status === 'appointed' ? 'アポ済' : m.status === 'completed' ? '完了' : '未アポ'
             ]);
@@ -211,11 +206,7 @@ const RouteManager = (() => {
             });
 
             startY = doc.lastAutoTable.finalY + 10;
-
-            if (startY > 260) {
-                doc.addPage();
-                startY = 20;
-            }
+            if (startY > 260) { doc.addPage(); startY = 20; }
         }
 
         const unassigned = customers.filter(c => !c.routeId);
@@ -262,7 +253,6 @@ const RouteManager = (() => {
         }
 
         let html = '';
-
         const appointed = customers.filter(c => c.status === 'appointed').length;
         const completed = customers.filter(c => c.status === 'completed').length;
         const pending = customers.filter(c => c.status === 'pending' || !c.status).length;
@@ -278,7 +268,6 @@ const RouteManager = (() => {
         for (const route of routes) {
             const members = customers.filter(c => c.routeId === route.id);
             if (members.length === 0) continue;
-
             const rAppointed = members.filter(c => c.status === 'appointed').length;
             const rCompleted = members.filter(c => c.status === 'completed').length;
 
@@ -291,122 +280,6 @@ const RouteManager = (() => {
         }
 
         summaryEl.innerHTML = html;
-    }
-
-    // v2.2.3追加 - 区間別の高速/下道選択ダイアログを表示
-    function showSegmentDialog(routeId, points, savedSegments) {
-        return new Promise((resolve) => {
-            // 既存ダイアログがあれば削除
-            const old = document.getElementById('segmentDialog');
-            if (old) old.remove();
-
-            // 区間リストを構築
-            const segList = [];
-            for (let i = 0; i < points.length - 1; i++) {
-                const segKey = `${points[i].id}_${points[i + 1].id}`;
-                const saved = savedSegments[segKey] || 'general';
-                segList.push({
-                    key: segKey,
-                    fromLabel: points[i].label,
-                    toLabel: points[i + 1].label,
-                    type: saved
-                });
-            }
-
-            const overlay = document.createElement('div');
-            overlay.id = 'segmentDialog';
-            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:10000;';
-
-            const dialog = document.createElement('div');
-            dialog.style.cssText = 'background:#fff;border-radius:12px;padding:20px;max-width:380px;width:92%;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 4px 20px rgba(0,0,0,0.3);';
-
-            // v2.2.3 - ヘッダー
-            let headerHtml = `
-                <div style="font-size:18px;font-weight:bold;margin-bottom:4px;">📏 区間別 道路選択</div>
-                <div style="font-size:13px;color:#666;margin-bottom:12px;">各区間をタップで 🚗下道 ⇔ 🛣️高速 切替</div>
-            `;
-
-            // v2.2.3 - 区間リスト（スクロール可能）
-            let listHtml = `<div style="overflow-y:auto;flex:1;margin-bottom:12px;">`;
-            segList.forEach((seg, idx) => {
-                const isHw = seg.type === 'highway';
-                const bg = isHw ? '#E3F2FD' : '#E8F5E9';
-                const border = isHw ? '#2196F3' : '#4CAF50';
-                const icon = isHw ? '🛣️' : '🚗';
-                const label = isHw ? '高速' : '下道';
-
-                listHtml += `
-                    <div id="seg_${idx}" data-key="${seg.key}" data-type="${seg.type}"
-                         onclick="RouteManager._toggleSegType(${idx})"
-                         style="display:flex;align-items:center;padding:10px 12px;margin-bottom:6px;
-                                border:2px solid ${border};border-radius:8px;background:${bg};
-                                cursor:pointer;user-select:none;transition:all 0.2s;">
-                        <span style="font-size:20px;margin-right:10px;" id="segIcon_${idx}">${icon}</span>
-                        <div style="flex:1;min-width:0;">
-                            <div style="font-size:13px;font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                                ${seg.fromLabel}
-                            </div>
-                            <div style="font-size:11px;color:#888;">↓</div>
-                            <div style="font-size:13px;font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                                ${seg.toLabel}
-                            </div>
-                        </div>
-                        <span style="font-size:14px;font-weight:bold;margin-left:8px;" id="segLabel_${idx}">${label}</span>
-                    </div>
-                `;
-            });
-            listHtml += `</div>`;
-
-            // v2.2.3 - ボタン
-            let btnHtml = `
-                <div style="display:flex;gap:8px;">
-                    <button id="segCancel" style="flex:1;padding:12px;border:1px solid #ccc;border-radius:8px;background:#f5f5f5;font-size:14px;cursor:pointer;color:#666;">
-                        キャンセル
-                    </button>
-                    <button id="segCalc" style="flex:2;padding:12px;border:none;border-radius:8px;background:#1976D2;color:#fff;font-size:16px;font-weight:bold;cursor:pointer;">
-                        📏 計算する
-                    </button>
-                </div>
-            `;
-
-            dialog.innerHTML = headerHtml + listHtml + btnHtml;
-            overlay.appendChild(dialog);
-            document.body.appendChild(overlay);
-
-            // イベント設定
-            document.getElementById('segCancel').onclick = () => { overlay.remove(); resolve(null); };
-            document.getElementById('segCalc').onclick = () => {
-                const result = {};
-                segList.forEach((seg, idx) => {
-                    const el = document.getElementById(`seg_${idx}`);
-                    result[seg.key] = el.dataset.type;
-                });
-                overlay.remove();
-                resolve(result);
-            };
-            overlay.onclick = (e) => { if (e.target === overlay) { overlay.remove(); resolve(null); } };
-        });
-    }
-
-    // v2.2.3追加 - 区間の道路種別をトグル切替
-    function _toggleSegType(idx) {
-        const el = document.getElementById(`seg_${idx}`);
-        const icon = document.getElementById(`segIcon_${idx}`);
-        const label = document.getElementById(`segLabel_${idx}`);
-
-        if (el.dataset.type === 'general') {
-            el.dataset.type = 'highway';
-            el.style.background = '#E3F2FD';
-            el.style.borderColor = '#2196F3';
-            icon.textContent = '🛣️';
-            label.textContent = '高速';
-        } else {
-            el.dataset.type = 'general';
-            el.style.background = '#E8F5E9';
-            el.style.borderColor = '#4CAF50';
-            icon.textContent = '🚗';
-            label.textContent = '下道';
-        }
     }
 
     // v2.2.3変更 - 区間別選択→距離計算→結果表示
@@ -434,24 +307,22 @@ const RouteManager = (() => {
 
         // 自宅住所チェック
         const settings = DataStorage.getSettings();
-        const homeAddress = settings.homeAddress;
-        if (!homeAddress) { alert('設定で自宅住所（出発点）を登録してください'); return; }
+        if (!settings.homeAddress) { alert('設定で自宅住所（出発点）を登録してください'); return; }
 
         // v2.2.3 - ポイントリスト（表示名付き）
         const points = [];
-        points.push({ id: 'home_start', address: homeAddress, label: '🏠 自宅（出発）' });
+        points.push({ id: 'home_start', address: settings.homeAddress, label: '🏠 自宅（出発）' });
         ordered.forEach(m => {
-            const name = (m.company || '不明').substring(0, 15);
-            points.push({ id: m.id, address: m.address, label: name });
+            points.push({ id: m.id, address: m.address, label: (m.company || '不明').substring(0, 15) });
         });
-        points.push({ id: 'home_end', address: homeAddress, label: '🏠 自宅（帰着）' });
+        points.push({ id: 'home_end', address: settings.homeAddress, label: '🏠 自宅（帰着）' });
 
         // v2.2.3 - 保存済み区間設定を取得
         const allSegments = DataStorage.getSegments();
         const savedSegments = allSegments[routeId] || {};
 
-        // v2.2.3 - 区間選択ダイアログ
-        const segmentChoices = await showSegmentDialog(routeId, points, savedSegments);
+        // v2.2.3 - 区間選択ダイアログ（segment-dialog.js）
+        const segmentChoices = await SegmentDialog.show(points, savedSegments);
         if (!segmentChoices) return;
 
         // v2.2.3 - 選択結果を保存（次回用）
@@ -464,7 +335,6 @@ const RouteManager = (() => {
         document.getElementById('loadingProgress').textContent = '走行距離計算中...';
 
         try {
-            // v2.2.3 - segmentChoicesを直接渡す
             const result = await DistanceCalc.calcRouteDistance(routeId, segmentChoices);
             loading.style.display = 'none';
 
@@ -493,7 +363,6 @@ const RouteManager = (() => {
     function applyDistanceToExpense(totalKm) {
         switchTab('expense');
         ExpenseForm.init();
-
         setTimeout(() => {
             const firstRow = document.querySelector('.exp-row');
             if (firstRow) {
@@ -510,6 +379,6 @@ const RouteManager = (() => {
     return {
         updateRoutePanel, toggleRouteSection,
         drawRouteLines, exportPDF, updateSummary,
-        calcDistance, _toggleSegType
+        calcDistance
     };
 })();
