@@ -90,7 +90,7 @@ const CsvHandler = (() => {
         // v2.2.2改善 - ヘッダー行を自動検出（「会社」「住所」「設置先」を含む行を探す）
         let headerRowIdx = 0;
         for (let i = 0; i < Math.min(rows.length, 10); i++) {
-            const rowStr = rows[i].map(c => String(c || '')).join('').toLowerCase();
+            const currentRow = rows[i] || []; const rowStr = currentRow.map(c => String(c || '')).join('').toLowerCase();
             if (rowStr.includes('会社') || rowStr.includes('設置先') || rowStr.includes('住所')) {
                 headerRowIdx = i;
                 break;
@@ -175,7 +175,7 @@ const CsvHandler = (() => {
         };
 
         for (let i = 0; i < header.length; i++) {
-            const h = header[i].toLowerCase();
+            const h = (header[i] || '').toLowerCase();
             if (h.includes('会社') || h.includes('設置先') || h.includes('名称') || h.includes('company')) {
                 if (map.company === -1) map.company = i;
             } else if (h.includes('住所') || h.includes('address') || h.includes('所在地')) {
