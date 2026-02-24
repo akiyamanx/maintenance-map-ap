@@ -73,7 +73,7 @@ const CsvHandler = (() => {
                 const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
                 processRows(rows);
             } catch (err) {
-                alert('❌ Excelファイルの読み込みに失敗しました。');
+                alert('❌ Excel読込エラー: ' + err.message);
                 console.error('Excel読込エラー:', err);
             }
         };
