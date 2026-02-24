@@ -1,8 +1,9 @@
 // ============================================
-// メンテナンスマップ v2.2.1 - route-manager.js
+// メンテナンスマップ v2.2.2 - route-manager.js
 // ルート管理・色分け・PDF出力・凡例
 // v2.0新規作成 - 分割ファイル構成対応
 // v2.2.1変更 - 🔢ボタン削除（ルートタブは確認専用に）
+// v2.2.2変更 - 距離計算に高速/下道選択ダイアログ追加
 // ============================================
 
 const RouteManager = (() => {
@@ -300,14 +301,62 @@ const RouteManager = (() => {
         summaryEl.innerHTML = html;
     }
 
-    // v2.2追加 - ルートの走行距離を計算して結果を表示する
+    // v2.2.2追加 - 高速/下道選択ダイアログを表示
+    function showRoadTypeDialog(routeId) {
+        return new Promise((resolve) => {
+            // 既存ダイアログがあれば削除
+            const old = document.getElementById('roadTypeDialog');
+            if (old) old.remove();
+
+            const overlay = document.createElement('div');
+            overlay.id = 'roadTypeDialog';
+            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:10000;';
+
+            const dialog = document.createElement('div');
+            dialog.style.cssText = 'background:#fff;border-radius:12px;padding:24px;max-width:320px;width:90%;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.3);';
+
+            dialog.innerHTML = `
+                <div style="font-size:18px;font-weight:bold;margin-bottom:16px;">📏 距離計算モード</div>
+                <div style="font-size:14px;color:#666;margin-bottom:20px;">ルートの計算方法を選んでください</div>
+                <div style="display:flex;flex-direction:column;gap:10px;">
+                    <button id="rdGeneral" style="padding:14px;border:2px solid #4CAF50;border-radius:8px;background:#E8F5E9;font-size:16px;cursor:pointer;font-weight:bold;">
+                        🚗 下道のみ
+                    </button>
+                    <button id="rdHighway" style="padding:14px;border:2px solid #2196F3;border-radius:8px;background:#E3F2FD;font-size:16px;cursor:pointer;font-weight:bold;">
+                        🛣️ 高速あり
+                    </button>
+                    <button id="rdCancel" style="padding:10px;border:1px solid #ccc;border-radius:8px;background:#f5f5f5;font-size:14px;cursor:pointer;color:#666;">
+                        キャンセル
+                    </button>
+                </div>
+            `;
+
+            overlay.appendChild(dialog);
+            document.body.appendChild(overlay);
+
+            // ボタンイベント
+            document.getElementById('rdGeneral').onclick = () => { overlay.remove(); resolve('general'); };
+            document.getElementById('rdHighway').onclick = () => { overlay.remove(); resolve('highway'); };
+            document.getElementById('rdCancel').onclick = () => { overlay.remove(); resolve(null); };
+            // 背景クリックでキャンセル
+            overlay.onclick = (e) => { if (e.target === overlay) { overlay.remove(); resolve(null); } };
+        });
+    }
+
+    // v2.2.2変更 - ルートの走行距離を計算して結果を表示する（選択ダイアログ付き）
     async function calcDistance(routeId) {
+        // v2.2.2追加 - まず高速/下道を選択
+        const roadType = await showRoadTypeDialog(routeId);
+        if (!roadType) return; // キャンセル
+
         const loading = document.getElementById('loading');
         loading.style.display = 'flex';
-        document.getElementById('loadingProgress').textContent = '走行距離計算中...';
+        const modeLabel = roadType === 'highway' ? '🛣️ 高速あり' : '🚗 下道のみ';
+        document.getElementById('loadingProgress').textContent = `走行距離計算中...（${modeLabel}）`;
 
         try {
-            const result = await DistanceCalc.calcRouteDistance(routeId);
+            // v2.2.2変更 - roadTypeを渡す
+            const result = await DistanceCalc.calcRouteDistance(routeId, roadType);
 
             loading.style.display = 'none';
 
@@ -316,10 +365,9 @@ const RouteManager = (() => {
             const route = routes.find(r => r.id === routeId);
             const routeName = route ? route.name : routeId;
 
-            let msg = `📏 ${routeName} の走行距離\n\n`;
-            msg += `総距離: ${result.totalKm}km\n`;
-            msg += `  🚗 下道: ${result.generalKm}km\n`;
-            msg += `  🛣️ 高速: ${result.highwayKm}km\n\n`;
+            let msg = `📏 ${routeName} の走行距離\n`;
+            msg += `（${modeLabel}で計算）\n\n`;
+            msg += `総距離: ${result.totalKm}km\n\n`;
             msg += `--- 区間詳細 ---\n`;
             result.segments.forEach((s, i) => {
                 const icon = s.type === 'highway' ? '🛣️' : '🚗';
