@@ -91,7 +91,6 @@ function selectWorkspace(wsId) {
         updateWsButton();
         const workspaces = DataStorage.getWorkspaces();
         const ws = workspaces.find(w => w.id === wsId);
-        console.log('📅 ワークスペース切替:', ws ? ws.name : wsId);
     }
 }
 
