@@ -1,26 +1,182 @@
 // ============================================
-// メンテナンスマップ v2.0 - data-storage.js
+// メンテナンスマップ v2.3 - data-storage.js
 // LocalStorage保存・読込・バックアップ・設定管理
 // v2.0新規作成 - 分割ファイル構成対応
+// v2.3追加 - 月別ワークスペース切り替え機能
 // ============================================
 
 const DataStorage = (() => {
-    // v2.0 - ストレージキー定義
-    const KEYS = {
-        customers: 'mm_customers',
-        routes: 'mm_routes',
-        segments: 'mm_segments',
-        geocache: 'mm_geocache',
+    // v2.3 - ワークスペース管理キー（共通・月に依存しない）
+    const WS_KEYS = {
+        workspaces: 'mm_workspaces',
+        currentWs: 'mm_workspace_current',
         settings: 'mm_settings',
-        expenses: 'mm_expenses'
+        geocache: 'mm_geocache'
     };
+
+    // v2.3 - ワークスペース依存キーのベース名
+    const WS_DATA_KEYS = ['customers', 'routes', 'segments', 'expenses'];
+
+    // v2.3 - 現在のワークスペースIDを取得
+    function getCurrentWorkspaceId() {
+        return localStorage.getItem(WS_KEYS.currentWs) || null;
+    }
+
+    // v2.3 - ワークスペースIDからキーを生成（例: mm_customers_2026-02）
+    function wsKey(baseName) {
+        const wsId = getCurrentWorkspaceId();
+        if (!wsId) return 'mm_' + baseName; // v2.3 - マイグレーション前のフォールバック
+        return 'mm_' + baseName + '_' + wsId;
+    }
+
+    // v2.3 - 動的KEYSゲッター（現在のワークスペースに応じたキーを返す）
+    function getKeys() {
+        return {
+            customers: wsKey('customers'),
+            routes: wsKey('routes'),
+            segments: wsKey('segments'),
+            expenses: wsKey('expenses'),
+            geocache: WS_KEYS.geocache,   // v2.3 - 共通
+            settings: WS_KEYS.settings     // v2.3 - 共通
+        };
+    }
+
+    // =============================================
+    // v2.3 - ワークスペース管理
+    // =============================================
+
+    // v2.3 - ワークスペース一覧を取得
+    function getWorkspaces() {
+        try {
+            const data = localStorage.getItem(WS_KEYS.workspaces);
+            return data ? JSON.parse(data) : [];
+        } catch (e) {
+            console.error('ワークスペース読込エラー:', e);
+            return [];
+        }
+    }
+
+    // v2.3 - ワークスペース一覧を保存
+    function saveWorkspaces(workspaces) {
+        localStorage.setItem(WS_KEYS.workspaces, JSON.stringify(workspaces));
+    }
+
+    // v2.3 - 新しいワークスペースを作成
+    function createWorkspace(yearMonth, name) {
+        const workspaces = getWorkspaces();
+        // v2.3 - 同じIDが既にあれば作成しない
+        if (workspaces.find(ws => ws.id === yearMonth)) {
+            console.warn('ワークスペース既に存在:', yearMonth);
+            return null;
+        }
+        const ws = {
+            id: yearMonth,         // 例: "2026-02"
+            name: name || yearMonth.replace(/^(\d{4})-(\d{2})$/, (_, y, m) => `${y}年${parseInt(m)}月`),
+            createdAt: new Date().toISOString()
+        };
+        workspaces.push(ws);
+        // v2.3 - 日付順にソート
+        workspaces.sort((a, b) => a.id.localeCompare(b.id));
+        saveWorkspaces(workspaces);
+
+        // v2.3 - デフォルトルートを新ワークスペースに設定
+        const routeKey = 'mm_routes_' + yearMonth;
+        if (!localStorage.getItem(routeKey)) {
+            localStorage.setItem(routeKey, JSON.stringify([...DEFAULT_ROUTES]));
+        }
+        return ws;
+    }
+
+    // v2.3 - ワークスペースを切り替え
+    function switchWorkspace(wsId) {
+        const workspaces = getWorkspaces();
+        if (!workspaces.find(ws => ws.id === wsId)) {
+            console.error('ワークスペースが見つかりません:', wsId);
+            return false;
+        }
+        localStorage.setItem(WS_KEYS.currentWs, wsId);
+        return true;
+    }
+
+    // v2.3 - ワークスペースを削除（データも削除）
+    function deleteWorkspace(wsId) {
+        let workspaces = getWorkspaces();
+        workspaces = workspaces.filter(ws => ws.id !== wsId);
+        saveWorkspaces(workspaces);
+        // v2.3 - 関連データも削除
+        WS_DATA_KEYS.forEach(key => {
+            localStorage.removeItem('mm_' + key + '_' + wsId);
+        });
+        // v2.3 - 削除したのが現在のワークスペースなら、最初のに切り替え
+        if (getCurrentWorkspaceId() === wsId) {
+            if (workspaces.length > 0) {
+                localStorage.setItem(WS_KEYS.currentWs, workspaces[0].id);
+            } else {
+                localStorage.removeItem(WS_KEYS.currentWs);
+            }
+        }
+    }
+
+    // v2.3 - ワークスペース名を変更
+    function renameWorkspace(wsId, newName) {
+        const workspaces = getWorkspaces();
+        const ws = workspaces.find(w => w.id === wsId);
+        if (ws) {
+            ws.name = newName;
+            saveWorkspaces(workspaces);
+        }
+    }
+
+    // v2.3 - 初回マイグレーション（旧キー→ワークスペース形式に変換）
+    function migrateIfNeeded() {
+        // v2.3 - 既にワークスペースが存在すればスキップ
+        if (getWorkspaces().length > 0) return;
+
+        // v2.3 - 旧データが存在するかチェック
+        const oldCustomers = localStorage.getItem('mm_customers');
+        const oldRoutes = localStorage.getItem('mm_routes');
+        if (!oldCustomers && !oldRoutes) {
+            // v2.3 - 旧データなし→今月のワークスペースだけ作って終了
+            const now = new Date();
+            const currentMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+            createWorkspace(currentMonth);
+            localStorage.setItem(WS_KEYS.currentWs, currentMonth);
+            return;
+        }
+
+        // v2.3 - 旧データを今月のワークスペースに移行
+        const now = new Date();
+        const currentMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+
+        // v2.3 - ワークスペース作成
+        createWorkspace(currentMonth);
+        localStorage.setItem(WS_KEYS.currentWs, currentMonth);
+
+        // v2.3 - 旧キー→新キーにコピー
+        const migrations = [
+            { old: 'mm_customers', new: 'mm_customers_' + currentMonth },
+            { old: 'mm_routes', new: 'mm_routes_' + currentMonth },
+            { old: 'mm_segments', new: 'mm_segments_' + currentMonth },
+            { old: 'mm_expenses', new: 'mm_expenses_' + currentMonth }
+        ];
+
+        migrations.forEach(m => {
+            const data = localStorage.getItem(m.old);
+            if (data) {
+                localStorage.setItem(m.new, data);
+                localStorage.removeItem(m.old); // v2.3 - 旧キーを削除
+            }
+        });
+
+        console.log('✅ ワークスペースマイグレーション完了:', currentMonth);
+    }
 
     // --- 顧客データ ---
 
-    // v2.0 - 顧客リスト取得
+    // v2.0 - 顧客リスト取得（v2.3でワークスペース対応）
     function getCustomers() {
         try {
-            const data = localStorage.getItem(KEYS.customers);
+            const data = localStorage.getItem(getKeys().customers);
             return data ? JSON.parse(data) : [];
         } catch (e) {
             console.error('顧客データ読込エラー:', e);
@@ -28,10 +184,10 @@ const DataStorage = (() => {
         }
     }
 
-    // v2.0 - 顧客リスト保存
+    // v2.0 - 顧客リスト保存（v2.3でワークスペース対応）
     function saveCustomers(customers) {
         try {
-            localStorage.setItem(KEYS.customers, JSON.stringify(customers));
+            localStorage.setItem(getKeys().customers, JSON.stringify(customers));
             return true;
         } catch (e) {
             console.error('顧客データ保存エラー:', e);
@@ -88,44 +244,44 @@ const DataStorage = (() => {
         { id: 'route_10', name: 'ルート10', color: '#ff5722', order: [] }
     ];
 
-    // v2.0 - ルート取得
+    // v2.0 - ルート取得（v2.3でワークスペース対応）
     function getRoutes() {
         try {
-            const data = localStorage.getItem(KEYS.routes);
+            const data = localStorage.getItem(getKeys().routes);
             return data ? JSON.parse(data) : [...DEFAULT_ROUTES];
         } catch (e) {
             return [...DEFAULT_ROUTES];
         }
     }
 
-    // v2.0 - ルート保存
+    // v2.0 - ルート保存（v2.3でワークスペース対応）
     function saveRoutes(routes) {
-        localStorage.setItem(KEYS.routes, JSON.stringify(routes));
+        localStorage.setItem(getKeys().routes, JSON.stringify(routes));
     }
 
     // --- 区間データ（高速/下道） ---
 
-    // v2.0 - 区間データ取得
+    // v2.0 - 区間データ取得（v2.3でワークスペース対応）
     function getSegments() {
         try {
-            const data = localStorage.getItem(KEYS.segments);
+            const data = localStorage.getItem(getKeys().segments);
             return data ? JSON.parse(data) : {};
         } catch (e) {
             return {};
         }
     }
 
-    // v2.0 - 区間データ保存
+    // v2.0 - 区間データ保存（v2.3でワークスペース対応）
     function saveSegments(segments) {
-        localStorage.setItem(KEYS.segments, JSON.stringify(segments));
+        localStorage.setItem(getKeys().segments, JSON.stringify(segments));
     }
 
-    // --- ジオコーディングキャッシュ ---
+    // --- ジオコーディングキャッシュ（v2.3 ワークスペース共通） ---
 
     // v2.0 - キャッシュ取得
     function getGeoCache() {
         try {
-            const data = localStorage.getItem(KEYS.geocache);
+            const data = localStorage.getItem(WS_KEYS.geocache);
             return data ? JSON.parse(data) : {};
         } catch (e) {
             return {};
@@ -136,15 +292,15 @@ const DataStorage = (() => {
     function setGeoCache(address, latLng) {
         const cache = getGeoCache();
         cache[address] = latLng;
-        localStorage.setItem(KEYS.geocache, JSON.stringify(cache));
+        localStorage.setItem(WS_KEYS.geocache, JSON.stringify(cache));
     }
 
-    // --- 設定 ---
+    // --- 設定（v2.3 ワークスペース共通） ---
 
     // v2.0 - 設定取得
     function getSettings() {
         try {
-            const data = localStorage.getItem(KEYS.settings);
+            const data = localStorage.getItem(WS_KEYS.settings);
             return data ? JSON.parse(data) : { homeAddress: '', apiKey: '' };
         } catch (e) {
             return { homeAddress: '', apiKey: '' };
@@ -153,15 +309,15 @@ const DataStorage = (() => {
 
     // v2.0 - 設定保存
     function saveSettings(settings) {
-        localStorage.setItem(KEYS.settings, JSON.stringify(settings));
+        localStorage.setItem(WS_KEYS.settings, JSON.stringify(settings));
     }
 
-    // --- 精算書データ（v2.1追加） ---
+    // --- 精算書データ（v2.1追加、v2.3でワークスペース対応） ---
 
     // v2.1追加 - 精算書下書き一覧取得
     function getExpenses() {
         try {
-            const data = localStorage.getItem(KEYS.expenses);
+            const data = localStorage.getItem(getKeys().expenses);
             return data ? JSON.parse(data) : [];
         } catch (e) {
             console.error('精算書データ読込エラー:', e);
@@ -172,7 +328,7 @@ const DataStorage = (() => {
     // v2.1追加 - 精算書下書き保存
     function saveExpenses(expenses) {
         try {
-            localStorage.setItem(KEYS.expenses, JSON.stringify(expenses));
+            localStorage.setItem(getKeys().expenses, JSON.stringify(expenses));
             return true;
         } catch (e) {
             console.error('精算書データ保存エラー:', e);
@@ -201,11 +357,18 @@ const DataStorage = (() => {
 
     // --- バックアップ ---
 
-    // v2.0 - JSONバックアップエクスポート
+    // v2.3更新 - JSONバックアップエクスポート（ワークスペース情報付き）
     function exportBackup() {
+        const wsId = getCurrentWorkspaceId();
+        const workspaces = getWorkspaces();
+        const currentWs = workspaces.find(ws => ws.id === wsId);
+        const wsName = currentWs ? currentWs.name : wsId;
+
         const data = {
-            version: '2.1',
+            version: '2.3',
             exportDate: new Date().toISOString(),
+            workspaceId: wsId,
+            workspaceName: wsName,
             customers: getCustomers(),
             routes: getRoutes(),
             segments: getSegments(),
@@ -216,13 +379,13 @@ const DataStorage = (() => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `maintenance_map_backup_${new Date().toISOString().slice(0,10)}.json`;
+        a.download = `maintenance_map_${wsId || 'backup'}_${new Date().toISOString().slice(0,10)}.json`;
         a.click();
         URL.revokeObjectURL(url);
-        alert('💾 バックアップを保存しました！');
+        alert(`💾 バックアップを保存しました！\n📅 ${wsName}`);
     }
 
-    // v2.0.1追加 - JSONバックアップインポート（v1.0互換対応）
+    // v2.0.1追加 - JSONバックアップインポート（v1.0互換対応、v2.3でワークスペース対応）
     function importBackup(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -235,7 +398,6 @@ const DataStorage = (() => {
                 if (data.version === '1.0' && data.data) {
                     const converted = convertV1toV2(data);
                     saveCustomers(converted.customers);
-                    // v2.0.1 - v1.0の座標をキャッシュに保存
                     converted.customers.forEach(c => {
                         if (c.lat && c.lng && c.address) {
                             setGeoCache(c.address, { lat: c.lat, lng: c.lng });
@@ -246,7 +408,7 @@ const DataStorage = (() => {
                     return;
                 }
 
-                // v2.0 - v2.0フォーマットの通常復元
+                // v2.3 / v2.0 - 通常復元（現在のワークスペースに読み込む）
                 if (data.customers) saveCustomers(data.customers);
                 if (data.routes) saveRoutes(data.routes);
                 if (data.segments) saveSegments(data.segments);
@@ -256,7 +418,8 @@ const DataStorage = (() => {
                     data.settings.apiKey = current.apiKey;
                     saveSettings(data.settings);
                 }
-                alert('📂 バックアップを復元しました！\nページをリロードします。');
+                const wsName = data.workspaceName || '';
+                alert(`📂 バックアップを復元しました！${wsName ? '\n📅 ' + wsName : ''}\nページをリロードします。`);
                 location.reload();
             } catch (err) {
                 alert('❌ バックアップファイルの読み込みに失敗しました。');
@@ -267,67 +430,8 @@ const DataStorage = (() => {
         event.target.value = '';
     }
 
-    // v2.0.1追加 - v1.0→v2.0データ変換
-    function convertV1toV2(v1Data) {
-        const customers = [];
-        const routes = getRoutes();
-
-        for (const item of v1Data.data) {
-            // v2.0.1 - v1.0のrouteId(数値0-10)→v2.0のrouteId(文字列)に変換
-            let routeId = null;
-            if (item.routeId && item.routeId > 0 && item.routeId <= 10) {
-                routeId = 'route_' + item.routeId;
-            }
-
-            // v2.0.1 - ステータス判定
-            let status = 'pending';
-            if (item.appointmentDate) status = 'appointed';
-
-            // v2.0.1 - アポ日時の統合
-            let appoDate = null;
-            if (item.appointmentDate) {
-                appoDate = item.appointmentDate;
-                if (item.appointmentTime) {
-                    appoDate += 'T' + item.appointmentTime;
-                }
-            }
-
-            // v2.0.1 - 台数（countフィールドまたはallItemsの長さ）
-            const unitCount = item.count || (item.allItems ? item.allItems.length : 1);
-
-            // v2.0.1 - 階数情報をメモに含める
-            let note = item.note || '';
-            if (item.floors && item.floors.length > 0 && !note.includes('階')) {
-                note = '【階数】' + item.floors.join(', ') + (note ? '\n' + note : '');
-            }
-
-            const customer = {
-                id: item.id || 'c_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-                company: item.displayName || item.company || '',
-                address: item.originalAddress || item.address || '',
-                phone: item.phone || '',
-                contact: item.contact || '',
-                note: note,
-                managementNo: item.no || '',
-                model: item.model || '',
-                reason: item.reason || '',
-                info: item.info || '',
-                routeId: routeId,
-                status: status,
-                appoDate: appoDate,
-                unitCount: unitCount,
-                lat: item.position ? item.position.lat : null,
-                lng: item.position ? item.position.lng : null,
-                floors: item.floors || [],
-                allItems: item.allItems || [],
-                createdAt: v1Data.exportDate || new Date().toISOString()
-            };
-
-            customers.push(customer);
-        }
-
-        return { customers };
-    }
+    // v2.3 - v1.0→v2.0データ変換はv1-converter.jsに分離（500行ルール対応）
+    // convertV1toV2()はグローバル関数として利用可能
 
     // v2.2追加 - ルートの訪問順を更新
     function updateRouteOrder(routeId, orderArray) {
@@ -339,23 +443,34 @@ const DataStorage = (() => {
         }
     }
 
-    // v2.0 - 全データリセット
+    // v2.3更新 - 現在のワークスペースのデータのみリセット
     function resetAll() {
+        const KEYS = getKeys();
         localStorage.removeItem(KEYS.customers);
         localStorage.removeItem(KEYS.routes);
         localStorage.removeItem(KEYS.segments);
         localStorage.removeItem(KEYS.expenses);
-        // v2.0 - 設定とキャッシュは残す
+        // v2.0 - 設定とキャッシュは残す（v2.3: ワークスペース共通なので残す）
     }
 
-    // v2.0 - 公開API
+    // v2.3 - 公開API（ワークスペース関連を追加）
     return {
+        // v2.3 - ワークスペース管理
+        getWorkspaces, createWorkspace, switchWorkspace, deleteWorkspace,
+        renameWorkspace, getCurrentWorkspaceId, migrateIfNeeded,
+        // v2.0 - 顧客
         getCustomers, saveCustomers, addCustomer, updateCustomer, deleteCustomer,
+        // v2.0 - ルート
         getRoutes, saveRoutes, DEFAULT_ROUTES, updateRouteOrder,
+        // v2.0 - 区間
         getSegments, saveSegments,
+        // v2.0 - キャッシュ
         getGeoCache, setGeoCache,
+        // v2.0 - 設定
         getSettings, saveSettings,
+        // v2.1 - 精算書
         getExpenses, saveExpenses, addExpense, deleteExpense,
+        // v2.0 - バックアップ
         exportBackup, importBackup, resetAll
     };
 })();

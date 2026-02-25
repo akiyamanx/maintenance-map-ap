@@ -1,8 +1,177 @@
 // ============================================
-// メンテナンスマップ v2.0 - ui-actions.js
+// メンテナンスマップ v2.3 - ui-actions.js
 // グローバルUI関数（モーダル・メニュー・パネル制御）
 // v2.0新規作成 - map-core.jsから分離
+// v2.3追加 - ワークスペース切り替えUI
 // ============================================
+
+// =============================================
+// v2.3 - ワークスペース切り替えUI
+// =============================================
+
+// v2.3 - ワークスペースボタンのラベルを更新
+function updateWsButton() {
+    const btn = document.getElementById('wsSwitchBtn');
+    if (!btn) return;
+    const wsId = DataStorage.getCurrentWorkspaceId();
+    const workspaces = DataStorage.getWorkspaces();
+    const current = workspaces.find(ws => ws.id === wsId);
+    if (current) {
+        // v2.3 - 短い表示名（例: "2月"）
+        const match = current.id.match(/^\d{4}-(\d{2})$/);
+        const shortName = match ? parseInt(match[1]) + '月' : current.name;
+        btn.textContent = '📅 ' + shortName;
+    } else {
+        btn.textContent = '📅 --';
+    }
+}
+
+// v2.3 - ワークスペースメニューを表示
+function showWorkspaceMenu() {
+    const overlay = document.getElementById('wsMenuOverlay');
+    const list = document.getElementById('wsMenuList');
+    const workspaces = DataStorage.getWorkspaces();
+    const currentId = DataStorage.getCurrentWorkspaceId();
+
+    let html = '';
+    if (workspaces.length === 0) {
+        html = '<div class="ws-menu-empty">ワークスペースがありません</div>';
+    } else {
+        workspaces.forEach(ws => {
+            const isActive = ws.id === currentId;
+            const match = ws.id.match(/^\d{4}-(\d{2})$/);
+            const displayMonth = match ? parseInt(match[1]) + '月' : ws.id;
+            const displayYear = match ? ws.id.substring(0, 4) + '年' : '';
+            const customers = (() => {
+                // v2.3 - 各ワークスペースの件数を取得（直接LocalStorageから）
+                try {
+                    const data = localStorage.getItem('mm_customers_' + ws.id);
+                    return data ? JSON.parse(data).length : 0;
+                } catch (e) { return 0; }
+            })();
+
+            html += `<div class="ws-menu-item ${isActive ? 'ws-active' : ''}" onclick="selectWorkspace('${ws.id}')">`;
+            html += `<div class="ws-menu-item-main">`;
+            html += `<span class="ws-menu-check">${isActive ? '✅' : '　'}</span>`;
+            html += `<span class="ws-menu-name">${displayYear}${displayMonth}</span>`;
+            html += `<span class="ws-menu-sub">${ws.name}</span>`;
+            html += `</div>`;
+            html += `<span class="ws-menu-count">${customers}件</span>`;
+            // v2.3 - 現在のワークスペース以外に削除ボタン
+            if (!isActive) {
+                html += `<button class="ws-menu-delete" onclick="event.stopPropagation(); confirmDeleteWorkspace('${ws.id}', '${ws.name}')">🗑️</button>`;
+            }
+            html += `</div>`;
+        });
+    }
+    list.innerHTML = html;
+    overlay.style.display = 'flex';
+
+    // v2.3 - メニューパネルが開いてたら閉じる
+    if (document.getElementById('menuPanel').style.display === 'block') toggleMenu();
+}
+
+// v2.3 - ワークスペースメニューを閉じる
+function hideWorkspaceMenu() {
+    document.getElementById('wsMenuOverlay').style.display = 'none';
+}
+
+// v2.3 - ワークスペースを選択して切り替え
+function selectWorkspace(wsId) {
+    const currentId = DataStorage.getCurrentWorkspaceId();
+    if (wsId === currentId) {
+        hideWorkspaceMenu();
+        return;
+    }
+
+    if (DataStorage.switchWorkspace(wsId)) {
+        hideWorkspaceMenu();
+        // v2.3 - 全UIを再描画
+        reloadAllUI();
+        updateWsButton();
+        const workspaces = DataStorage.getWorkspaces();
+        const ws = workspaces.find(w => w.id === wsId);
+        console.log('📅 ワークスペース切替:', ws ? ws.name : wsId);
+    }
+}
+
+// v2.3 - 全UIを再描画（ワークスペース切り替え後）
+function reloadAllUI() {
+    // v2.3 - 地図マーカー再描画
+    MapCore.refreshAllMarkers();
+    // v2.3 - ルートパネル再描画
+    RouteManager.updateRoutePanel();
+    // v2.3 - 精算書を再初期化（次にタブ開いた時にinit()が走るようにフラグリセット）
+    if (typeof ExpenseForm !== 'undefined' && ExpenseForm.resetInitFlag) {
+        ExpenseForm.resetInitFlag();
+    }
+    // v2.3 - 現在のタブが精算書なら即再初期化
+    const activeTab = document.querySelector('.tab.active');
+    if (activeTab && activeTab.dataset.tab === 'expense') {
+        ExpenseForm.init();
+    }
+    // v2.3 - 集計タブが開いてれば更新
+    if (activeTab && activeTab.dataset.tab === 'summary') {
+        RouteManager.updateSummary();
+    }
+}
+
+// v2.3 - ワークスペース追加ダイアログを表示
+function showAddWorkspaceDialog() {
+    hideWorkspaceMenu();
+    // v2.3 - 来月をデフォルト値に
+    const now = new Date();
+    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const defaultVal = nextMonth.getFullYear() + '-' + String(nextMonth.getMonth() + 1).padStart(2, '0');
+    document.getElementById('addWsMonth').value = defaultVal;
+    document.getElementById('addWsName').value = '';
+    document.getElementById('addWsModal').style.display = 'flex';
+}
+
+// v2.3 - ワークスペース追加ダイアログを閉じる
+function hideAddWorkspaceDialog() {
+    document.getElementById('addWsModal').style.display = 'none';
+}
+
+// v2.3 - ワークスペースを作成
+function addWorkspace() {
+    const monthInput = document.getElementById('addWsMonth').value;
+    if (!monthInput) {
+        alert('年月を選択してください。');
+        return;
+    }
+    const name = document.getElementById('addWsName').value.trim();
+    const ws = DataStorage.createWorkspace(monthInput, name || '');
+    if (!ws) {
+        alert('このワークスペースは既に存在します。');
+        return;
+    }
+    hideAddWorkspaceDialog();
+
+    // v2.3 - 作成後すぐに切り替えるか確認
+    if (confirm(`📅 ${ws.name} を作成しました！\nこのワークスペースに切り替えますか？`)) {
+        DataStorage.switchWorkspace(ws.id);
+        reloadAllUI();
+        updateWsButton();
+    }
+}
+
+// v2.3 - ワークスペース削除確認
+function confirmDeleteWorkspace(wsId, wsName) {
+    if (!confirm(`⚠️ 「${wsName}」を削除しますか？\nこのワークスペースの顧客・ルート・精算書データがすべて削除されます。\nこの操作は取り消せません。`)) {
+        return;
+    }
+    DataStorage.deleteWorkspace(wsId);
+    // v2.3 - メニューを更新
+    showWorkspaceMenu();
+    updateWsButton();
+    // v2.3 - もし現在のワークスペースが変わったらUI再描画
+    reloadAllUI();
+}
+
+// =============================================
+// v2.0 - 既存のUI関数（変更なし）
+// =============================================
 
 // v2.0 - メニュートグル
 function toggleMenu() {
@@ -106,7 +275,7 @@ function saveSettings() {
     }
 }
 
-// v2.0 - リセット確認
+// v2.3更新 - リセット確認（現在のワークスペース名を表示）
 function showResetConfirm() {
     const customers = DataStorage.getCustomers();
     document.getElementById('resetCount').textContent = `${customers.length}件`;
@@ -123,7 +292,7 @@ function resetAllData() {
     MapCore.updateCountBadge();
     MapCore.updateCustomerList();
     RouteManager.updateRoutePanel();
-    alert('🗑️ 全データを削除しました。');
+    alert('🗑️ 現在のワークスペースの全データを削除しました。');
 }
 
 // v2.0 - バックアップ

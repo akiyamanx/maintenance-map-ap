@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>メンテナンスマップ v2.2</title>
+    <title>メンテナンスマップ v2.3</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1a56db">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,6 +14,7 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="expense-styles.css">
     <link rel="stylesheet" href="route-order-styles.css">
+    <link rel="stylesheet" href="workspace-styles.css">
 </head>
 <body>
     <!-- v2.0 スプラッシュ画面 -->
@@ -22,7 +23,7 @@
             <div class="splash-icon">📍</div>
             <h1 class="splash-title">メンテナンスマップ</h1>
             <p class="splash-sub">Maintenance Route Manager</p>
-            <p class="splash-ver">v2.2</p>
+            <p class="splash-ver">v2.3</p>
             <div class="splash-features">
                 <span>📊 CSV取込</span>
                 <span>🗺️ 自動マッピング</span>
@@ -30,6 +31,7 @@
                 <span>📄 PDF出力</span>
                 <span>💰 交通費精算</span>
                 <span>📏 距離計算</span>
+                <span>📅 月別切替</span>
             </div>
             <button class="splash-btn" onclick="closeSplash()">はじめる</button>
             <p class="splash-credit">COCOMI CORE 🤍</p>
@@ -40,6 +42,8 @@
     <header class="app-header">
         <h1 class="app-title">📍 メンテナンスマップ</h1>
         <div class="header-actions">
+            <!-- v2.3追加 - ワークスペース切り替えボタン -->
+            <button class="btn btn-ws" id="wsSwitchBtn" onclick="showWorkspaceMenu()">📅 --</button>
             <label class="btn btn-upload" for="fileInput">📁 読込</label>
             <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" style="display:none">
             <button class="btn btn-add" onclick="showAddModal()">➕ 追加</button>
@@ -48,6 +52,38 @@
         </div>
         <div class="count-badge" id="countBadge">0件</div>
     </header>
+
+    <!-- v2.3追加 - ワークスペースメニュー -->
+    <div class="ws-menu-overlay" id="wsMenuOverlay" style="display:none;" onclick="hideWorkspaceMenu()">
+        <div class="ws-menu" onclick="event.stopPropagation()">
+            <div class="ws-menu-title">📅 ワークスペース切替</div>
+            <div class="ws-menu-list" id="wsMenuList">
+                <!-- v2.3 - JSで動的生成 -->
+            </div>
+            <div class="ws-menu-actions">
+                <button class="ws-menu-add" onclick="showAddWorkspaceDialog()">➕ 新しい月を追加</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- v2.3追加 - ワークスペース追加ダイアログ -->
+    <div class="modal-overlay" id="addWsModal" style="display:none;">
+        <div class="modal">
+            <h2>📅 ワークスペース追加</h2>
+            <div class="modal-row">
+                <label>年月</label>
+                <input type="month" id="addWsMonth">
+            </div>
+            <div class="modal-row">
+                <label>名前（任意）</label>
+                <input type="text" id="addWsName" placeholder="例：3月メンテ">
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-cancel" onclick="hideAddWorkspaceDialog()">キャンセル</button>
+                <button class="modal-submit" onclick="addWorkspace()">作成</button>
+            </div>
+        </div>
+    </div>
 
     <!-- メニューパネル -->
     <div class="menu-panel" id="menuPanel" style="display:none;">
@@ -200,7 +236,7 @@
         <div class="modal">
             <h2>🗑️ データをリセット</h2>
             <p class="confirm-text">
-                現在のデータをすべて削除しますか？<br>
+                現在のワークスペースのデータをすべて削除しますか？<br>
                 この操作は取り消せません。<br>
                 <strong id="resetCount">0件</strong>のデータが削除されます
             </p>
@@ -228,6 +264,7 @@
 
     <!-- v2.0 アプリモジュール -->
     <script src="data-storage.js"></script>
+    <script src="v1-converter.js"></script>
     <script src="csv-handler.js"></script>
     <script src="map-core.js"></script>
     <script src="route-manager.js"></script>
@@ -239,10 +276,15 @@
     <script src="etc-reader.js"></script>
     <script src="ui-actions.js"></script>
 
-    <!-- v2.0 APIキー読み込み＋初期化 -->
+    <!-- v2.3 APIキー読み込み＋初期化（マイグレーション付き） -->
     <script>
+        // v2.3 - マイグレーション実行（旧データ→ワークスペース形式）
+        DataStorage.migrateIfNeeded();
+
+        // v2.3 - ワークスペースボタンのラベルを更新
+        updateWsButton();
+
         // v2.0 - アプリ初期化
-        // APIキーは設定から読み込む（設定未完了なら入力を促す）
         const settings = DataStorage.getSettings();
         if (settings.apiKey) {
             const script = document.createElement('script');
@@ -251,7 +293,6 @@
             script.defer = true;
             document.body.appendChild(script);
         } else {
-            // v2.0 - APIキー未設定時
             window.addEventListener('DOMContentLoaded', () => {
                 closeSplash();
                 showSettingsModal();
