@@ -1,5 +1,6 @@
-# COCOMI CI テスト審査 v1.0
+# COCOMI CI テスト審査 v1.1
 # COCOMIファミリー共通CI + LINE通知ワークフロー
+# v1.1追加 - console.log検出、TODO/FIXME検出
 
 name: COCOMI CI テスト審査
 
@@ -185,7 +186,67 @@ jobs:
           fi
           echo "fail_detail=" >> "$GITHUB_OUTPUT"
 
-      # ⑦ セキュリティチェック
+      # ⑦ console.logチェック（.jsファイル、sw.js除外） ★v1.1追加
+      - name: console.log チェック
+        id: consolecheck
+        if: steps.detect.outputs.has_js == 'true'
+        run: |
+          fail_detail=""
+          failed=false
+
+          while IFS= read -r f; do
+            basename=$(basename "$f")
+            # sw.js除外
+            if [ "$basename" = "sw.js" ]; then
+              continue
+            fi
+
+            # console.log を検出（console.error/console.warnは許可）
+            matches=$(grep -n 'console\.log(' "$f" || true)
+            if [ -n "$matches" ]; then
+              count=$(echo "$matches" | wc -l)
+              failed=true
+              fail_detail="${fail_detail}${f}: console.log ${count}箇所\n"
+            fi
+          done < <(find . -name '*.js' -not -path './.git/*' -not -path './node_modules/*')
+
+          if [ "$failed" = true ]; then
+            echo "fail_detail<<EOF" >> "$GITHUB_OUTPUT"
+            echo -e "$fail_detail" >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+            echo "::error::console.log が残っています（デバッグ用コードの消し忘れ？）"
+            exit 1
+          fi
+          echo "fail_detail=" >> "$GITHUB_OUTPUT"
+
+      # ⑧ TODO/FIXMEチェック（全拡張子） ★v1.1追加
+      - name: TODO/FIXME チェック
+        id: todocheck
+        run: |
+          fail_detail=""
+          failed=false
+
+          while IFS= read -r f; do
+            matches=$(grep -inE '(TODO|FIXME|HACK|XXX):' "$f" || true)
+            if [ -n "$matches" ]; then
+              count=$(echo "$matches" | wc -l)
+              failed=true
+              # 該当行の内容も表示（最大3行まで）
+              preview=$(echo "$matches" | head -3 | sed 's/^/  /')
+              fail_detail="${fail_detail}${f}: ${count}箇所\n${preview}\n\n"
+            fi
+          done < <(find . \( -name '*.sh' -o -name '*.js' -o -name '*.css' -o -name '*.html' \) -not -path './.git/*' -not -path './node_modules/*')
+
+          if [ "$failed" = true ]; then
+            echo "fail_detail<<EOF" >> "$GITHUB_OUTPUT"
+            echo -e "$fail_detail" >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+            echo "::error::TODO/FIXME コメントが残っています"
+            exit 1
+          fi
+          echo "fail_detail=" >> "$GITHUB_OUTPUT"
+
+      # ⑨ セキュリティチェック
       - name: セキュリティチェック
         id: securitycheck
         run: |
@@ -230,7 +291,7 @@ jobs:
           fi
           echo "fail_detail=" >> "$GITHUB_OUTPUT"
 
-      # ⑧ サマリー出力（常に実行）
+      # ⑩ サマリー出力（常に実行）
       - name: サマリー出力
         if: always()
         run: |
@@ -239,57 +300,64 @@ jobs:
           echo "| チェック項目 | 結果 |" >> "$GITHUB_STEP_SUMMARY"
           echo "|-------------|------|" >> "$GITHUB_STEP_SUMMARY"
 
-          # 各ステップの結果を判定
-          checks=("shellcheck:ShellCheck" "linecheck:500行チェック" "headercheck:先頭コメント" "versioncheck:バージョン番号" "securitycheck:セキュリティ")
-          for item in "${checks[@]}"; do
-            id="${item%%:*}"
-            label="${item##*:}"
-            case "$id" in
-              shellcheck)
-                if [ "${{ steps.detect.outputs.has_sh }}" != "true" ]; then
-                  echo "| $label | ⏭ スキップ |" >> "$GITHUB_STEP_SUMMARY"
-                elif [ "${{ steps.shellcheck.outcome }}" = "success" ]; then
-                  echo "| $label | ✅ 合格 |" >> "$GITHUB_STEP_SUMMARY"
-                else
-                  echo "| $label | ❌ 不合格 |" >> "$GITHUB_STEP_SUMMARY"
-                fi
-                ;;
-              linecheck)
-                if [ "${{ steps.linecheck.outcome }}" = "success" ]; then
-                  echo "| $label | ✅ 合格 |" >> "$GITHUB_STEP_SUMMARY"
-                else
-                  echo "| $label | ❌ 不合格 |" >> "$GITHUB_STEP_SUMMARY"
-                fi
-                ;;
-              headercheck)
-                if [ "${{ steps.headercheck.outcome }}" = "success" ]; then
-                  echo "| $label | ✅ 合格 |" >> "$GITHUB_STEP_SUMMARY"
-                else
-                  echo "| $label | ❌ 不合格 |" >> "$GITHUB_STEP_SUMMARY"
-                fi
-                ;;
-              versioncheck)
-                if [ "${{ steps.versioncheck.outcome }}" = "success" ]; then
-                  echo "| $label | ✅ 合格 |" >> "$GITHUB_STEP_SUMMARY"
-                else
-                  echo "| $label | ❌ 不合格 |" >> "$GITHUB_STEP_SUMMARY"
-                fi
-                ;;
-              securitycheck)
-                if [ "${{ steps.securitycheck.outcome }}" = "success" ]; then
-                  echo "| $label | ✅ 合格 |" >> "$GITHUB_STEP_SUMMARY"
-                else
-                  echo "| $label | ❌ 不合格 |" >> "$GITHUB_STEP_SUMMARY"
-                fi
-                ;;
-            esac
-          done
+          # ShellCheck
+          if [ "${{ steps.detect.outputs.has_sh }}" != "true" ]; then
+            echo "| ShellCheck | ⏭ スキップ |" >> "$GITHUB_STEP_SUMMARY"
+          elif [ "${{ steps.shellcheck.outcome }}" = "success" ]; then
+            echo "| ShellCheck | ✅ 合格 |" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "| ShellCheck | ❌ 不合格 |" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          # 500行チェック
+          if [ "${{ steps.linecheck.outcome }}" = "success" ]; then
+            echo "| 500行チェック | ✅ 合格 |" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "| 500行チェック | ❌ 不合格 |" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          # 先頭コメント
+          if [ "${{ steps.headercheck.outcome }}" = "success" ]; then
+            echo "| 先頭コメント | ✅ 合格 |" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "| 先頭コメント | ❌ 不合格 |" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          # バージョン番号
+          if [ "${{ steps.versioncheck.outcome }}" = "success" ]; then
+            echo "| バージョン番号 | ✅ 合格 |" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "| バージョン番号 | ❌ 不合格 |" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          # v1.1追加 - console.log
+          if [ "${{ steps.detect.outputs.has_js }}" != "true" ]; then
+            echo "| console.log | ⏭ スキップ |" >> "$GITHUB_STEP_SUMMARY"
+          elif [ "${{ steps.consolecheck.outcome }}" = "success" ]; then
+            echo "| console.log | ✅ 合格 |" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "| console.log | ❌ 不合格 |" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          # v1.1追加 - TODO/FIXME
+          if [ "${{ steps.todocheck.outcome }}" = "success" ]; then
+            echo "| TODO/FIXME | ✅ 合格 |" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "| TODO/FIXME | ❌ 不合格 |" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          # セキュリティ
+          if [ "${{ steps.securitycheck.outcome }}" = "success" ]; then
+            echo "| セキュリティ | ✅ 合格 |" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "| セキュリティ | ❌ 不合格 |" >> "$GITHUB_STEP_SUMMARY"
+          fi
 
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "📋 コミット: \`${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "👤 実行者: ${{ github.actor }}" >> "$GITHUB_STEP_SUMMARY"
 
-      # ⑨ LINE通知（成功時）
+      # ⑪ LINE通知（成功時）
       - name: LINE通知（成功）
         if: success()
         env:
@@ -310,6 +378,8 @@ jobs:
           ✅ 500行チェック: 合格
           ✅ 先頭コメント: 合格
           ✅ バージョン番号: 合格
+          ✅ console.log: 合格
+          ✅ TODO/FIXME: 合格
           ✅ セキュリティ: 合格"
 
           # ShellCheckの結果を追加
@@ -332,7 +402,7 @@ jobs:
               '{to: $to, messages: [{type: "text", text: $text}]}'
             )"
 
-      # ⑩ LINE通知（失敗時）
+      # ⑫ LINE通知（失敗時）
       - name: LINE通知（失敗）
         if: failure()
         env:
@@ -352,6 +422,8 @@ jobs:
           LINECHECK_DETAIL="${{ steps.linecheck.outputs.fail_detail }}"
           HEADERCHECK_DETAIL="${{ steps.headercheck.outputs.fail_detail }}"
           VERSIONCHECK_DETAIL="${{ steps.versioncheck.outputs.fail_detail }}"
+          CONSOLECHECK_DETAIL="${{ steps.consolecheck.outputs.fail_detail }}"
+          TODOCHECK_DETAIL="${{ steps.todocheck.outputs.fail_detail }}"
           SECURITYCHECK_DETAIL="${{ steps.securitycheck.outputs.fail_detail }}"
 
           if [ -n "$SHELLCHECK_DETAIL" ]; then
@@ -376,6 +448,18 @@ jobs:
             FAIL_REASONS="${FAIL_REASONS}
           ❌ バージョン番号:
           ${VERSIONCHECK_DETAIL}"
+          fi
+
+          if [ -n "$CONSOLECHECK_DETAIL" ]; then
+            FAIL_REASONS="${FAIL_REASONS}
+          ❌ console.log:
+          ${CONSOLECHECK_DETAIL}"
+          fi
+
+          if [ -n "$TODOCHECK_DETAIL" ]; then
+            FAIL_REASONS="${FAIL_REASONS}
+          ❌ TODO/FIXME:
+          ${TODOCHECK_DETAIL}"
           fi
 
           if [ -n "$SECURITYCHECK_DETAIL" ]; then
