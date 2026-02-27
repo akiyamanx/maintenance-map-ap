@@ -1,10 +1,6 @@
-// ============================================
-// メンテナンスマップ v2.3 - data-storage.js
+// メンテナンスマップ v2.4 - data-storage.js
 // LocalStorage保存・読込・バックアップ・設定管理
-// v2.0新規作成 - 分割ファイル構成対応
-// v2.3追加 - 月別ワークスペース切り替え機能
-// ============================================
-
+// v2.4 - 全ワークスペース一括バックアップ対応
 const DataStorage = (() => {
     // v2.3 - ワークスペース管理キー（共通・月に依存しない）
     const WS_KEYS = {
@@ -40,10 +36,7 @@ const DataStorage = (() => {
             settings: WS_KEYS.settings     // v2.3 - 共通
         };
     }
-
-    // =============================================
     // v2.3 - ワークスペース管理
-    // =============================================
 
     // v2.3 - ワークスペース一覧を取得
     function getWorkspaces() {
@@ -173,7 +166,6 @@ const DataStorage = (() => {
 
     // --- 顧客データ ---
 
-    // v2.0 - 顧客リスト取得（v2.3でワークスペース対応）
     function getCustomers() {
         try {
             const data = localStorage.getItem(getKeys().customers);
@@ -184,7 +176,6 @@ const DataStorage = (() => {
         }
     }
 
-    // v2.0 - 顧客リスト保存（v2.3でワークスペース対応）
     function saveCustomers(customers) {
         try {
             localStorage.setItem(getKeys().customers, JSON.stringify(customers));
@@ -196,7 +187,6 @@ const DataStorage = (() => {
         }
     }
 
-    // v2.0 - 顧客1件追加
     function addCustomer(customer) {
         const customers = getCustomers();
         customer.id = customer.id || 'c_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
@@ -244,7 +234,6 @@ const DataStorage = (() => {
         { id: 'route_10', name: 'ルート10', color: '#ff5722', order: [] }
     ];
 
-    // v2.0 - ルート取得（v2.3でワークスペース対応）
     function getRoutes() {
         try {
             const data = localStorage.getItem(getKeys().routes);
@@ -254,14 +243,12 @@ const DataStorage = (() => {
         }
     }
 
-    // v2.0 - ルート保存（v2.3でワークスペース対応）
     function saveRoutes(routes) {
         localStorage.setItem(getKeys().routes, JSON.stringify(routes));
     }
 
     // --- 区間データ（高速/下道） ---
 
-    // v2.0 - 区間データ取得（v2.3でワークスペース対応）
     function getSegments() {
         try {
             const data = localStorage.getItem(getKeys().segments);
@@ -271,7 +258,6 @@ const DataStorage = (() => {
         }
     }
 
-    // v2.0 - 区間データ保存（v2.3でワークスペース対応）
     function saveSegments(segments) {
         localStorage.setItem(getKeys().segments, JSON.stringify(segments));
     }
@@ -314,7 +300,6 @@ const DataStorage = (() => {
 
     // --- 精算書データ（v2.1追加、v2.3でワークスペース対応） ---
 
-    // v2.1追加 - 精算書下書き一覧取得
     function getExpenses() {
         try {
             const data = localStorage.getItem(getKeys().expenses);
@@ -325,7 +310,6 @@ const DataStorage = (() => {
         }
     }
 
-    // v2.1追加 - 精算書下書き保存
     function saveExpenses(expenses) {
         try {
             localStorage.setItem(getKeys().expenses, JSON.stringify(expenses));
@@ -337,7 +321,6 @@ const DataStorage = (() => {
         }
     }
 
-    // v2.1追加 - 精算書1件追加（最大20件）
     function addExpense(expense) {
         const expenses = getExpenses();
         expense.id = expense.id || 'exp_' + Date.now();
@@ -348,7 +331,6 @@ const DataStorage = (() => {
         return expense;
     }
 
-    // v2.1追加 - 精算書1件削除
     function deleteExpense(id) {
         let expenses = getExpenses();
         expenses = expenses.filter(e => e.id !== id);
@@ -396,7 +378,6 @@ const DataStorage = (() => {
         alert('💾 全ワークスペースを保存しました！\n📅 ' + wsNames + '\n（' + workspaces.length + '件）');
     }
 
-    // v2.4更新 - JSONバックアップインポート（v1.0/v2.3互換 + v2.4全ワークスペース対応）
     function importBackup(event) {
         var file = event.target.files[0];
         if (!file) return;
@@ -405,7 +386,6 @@ const DataStorage = (() => {
             try {
                 var data = JSON.parse(e.target.result);
 
-                // v2.0.1追加 - v1.0フォーマット検出＆変換
                 if (data.version === '1.0' && data.data) {
                     var converted = convertV1toV2(data);
                     saveCustomers(converted.customers);
@@ -471,7 +451,6 @@ const DataStorage = (() => {
     // v2.3 - v1.0→v2.0データ変換はv1-converter.jsに分離（500行ルール対応）
     // convertV1toV2()はグローバル関数として利用可能
 
-    // v2.2追加 - ルートの訪問順を更新
     function updateRouteOrder(routeId, orderArray) {
         const routes = getRoutes();
         const route = routes.find(r => r.id === routeId);
@@ -491,7 +470,6 @@ const DataStorage = (() => {
         // v2.0 - 設定とキャッシュは残す（v2.3: ワークスペース共通なので残す）
     }
 
-    // v2.3 - 公開API（ワークスペース関連を追加）
     return {
         // v2.3 - ワークスペース管理
         getWorkspaces, createWorkspace, switchWorkspace, deleteWorkspace,
