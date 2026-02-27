@@ -168,6 +168,7 @@ const DataStorage = (() => {
             }
         });
 
+        console.log('✅ ワークスペースマイグレーション完了:', currentMonth);
     }
 
     // --- 顧客データ ---
