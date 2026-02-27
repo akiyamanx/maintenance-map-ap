@@ -161,7 +161,7 @@ const DataStorage = (() => {
             }
         });
 
-        console.log('✅ ワークスペースマイグレーション完了:', currentMonth);
+        // v2.3 - マイグレーション完了
     }
 
     // --- 顧客データ ---
