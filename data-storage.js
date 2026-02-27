@@ -357,69 +357,107 @@ const DataStorage = (() => {
 
     // --- バックアップ ---
 
-    // v2.3更新 - JSONバックアップエクスポート（ワークスペース情報付き）
+    // v2.4更新 - JSONバックアップエクスポート（全ワークスペース一括保存）
     function exportBackup() {
-        const wsId = getCurrentWorkspaceId();
-        const workspaces = getWorkspaces();
-        const currentWs = workspaces.find(ws => ws.id === wsId);
-        const wsName = currentWs ? currentWs.name : wsId;
+        var workspaces = getWorkspaces();
+        var currentWsId = getCurrentWorkspaceId();
 
-        const data = {
-            version: '2.3',
+        // v2.4 - 全ワークスペースのデータを収集
+        var allWorkspaceData = [];
+        workspaces.forEach(function(ws) {
+            var prefix = 'mm_';
+            var suffix = '_' + ws.id;
+            allWorkspaceData.push({
+                id: ws.id,
+                name: ws.name,
+                customers: JSON.parse(localStorage.getItem(prefix + 'customers' + suffix) || '[]'),
+                routes: JSON.parse(localStorage.getItem(prefix + 'routes' + suffix) || '[]'),
+                segments: JSON.parse(localStorage.getItem(prefix + 'segments' + suffix) || '[]'),
+                expenses: JSON.parse(localStorage.getItem(prefix + 'expenses' + suffix) || '[]')
+            });
+        });
+
+        var data = {
+            version: '2.4',
             exportDate: new Date().toISOString(),
-            workspaceId: wsId,
-            workspaceName: wsName,
-            customers: getCustomers(),
-            routes: getRoutes(),
-            segments: getSegments(),
-            settings: getSettings(),
-            expenses: getExpenses()
+            currentWorkspaceId: currentWsId,
+            workspaces: workspaces,
+            allWorkspaceData: allWorkspaceData,
+            settings: getSettings()
         };
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
+        var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
         a.href = url;
-        a.download = `maintenance_map_${wsId || 'backup'}_${new Date().toISOString().slice(0,10)}.json`;
+        a.download = 'maintenance_map_all_' + new Date().toISOString().slice(0,10) + '.json';
         a.click();
         URL.revokeObjectURL(url);
-        alert(`💾 バックアップを保存しました！\n📅 ${wsName}`);
+        var wsNames = workspaces.map(function(ws) { return ws.name || ws.id; }).join(', ');
+        alert('💾 全ワークスペースを保存しました！\n📅 ' + wsNames + '\n（' + workspaces.length + '件）');
     }
 
-    // v2.0.1追加 - JSONバックアップインポート（v1.0互換対応、v2.3でワークスペース対応）
+    // v2.4更新 - JSONバックアップインポート（v1.0/v2.3互換 + v2.4全ワークスペース対応）
     function importBackup(event) {
-        const file = event.target.files[0];
+        var file = event.target.files[0];
         if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (e) => {
+        var reader = new FileReader();
+        reader.onload = function(e) {
             try {
-                const data = JSON.parse(e.target.result);
+                var data = JSON.parse(e.target.result);
 
                 // v2.0.1追加 - v1.0フォーマット検出＆変換
                 if (data.version === '1.0' && data.data) {
-                    const converted = convertV1toV2(data);
+                    var converted = convertV1toV2(data);
                     saveCustomers(converted.customers);
-                    converted.customers.forEach(c => {
+                    converted.customers.forEach(function(c) {
                         if (c.lat && c.lng && c.address) {
                             setGeoCache(c.address, { lat: c.lat, lng: c.lng });
                         }
                     });
-                    alert(`📂 v1.0バックアップを変換して復元しました！\n${converted.customers.length}件のデータを読み込みました。\nページをリロードします。`);
+                    alert('📂 v1.0バックアップを変換して復元しました！\n' + converted.customers.length + '件のデータを読み込みました。\nページをリロードします。');
                     location.reload();
                     return;
                 }
 
-                // v2.3 / v2.0 - 通常復元（現在のワークスペースに読み込む）
+                // v2.4 - 全ワークスペース一括復元
+                if (data.version === '2.4' && data.allWorkspaceData) {
+                    if (data.workspaces) {
+                        saveWorkspaces(data.workspaces);
+                    }
+                    data.allWorkspaceData.forEach(function(wsData) {
+                        var prefix = 'mm_';
+                        var suffix = '_' + wsData.id;
+                        localStorage.setItem(prefix + 'customers' + suffix, JSON.stringify(wsData.customers || []));
+                        localStorage.setItem(prefix + 'routes' + suffix, JSON.stringify(wsData.routes || []));
+                        localStorage.setItem(prefix + 'segments' + suffix, JSON.stringify(wsData.segments || []));
+                        localStorage.setItem(prefix + 'expenses' + suffix, JSON.stringify(wsData.expenses || []));
+                    });
+                    if (data.settings) {
+                        var current = getSettings();
+                        data.settings.apiKey = current.apiKey;
+                        saveSettings(data.settings);
+                    }
+                    if (data.currentWorkspaceId) {
+                        localStorage.setItem(WS_KEYS.currentWs, data.currentWorkspaceId);
+                    }
+                    var wsCount = data.allWorkspaceData.length;
+                    alert('📂 全ワークスペースを復元しました！\n📅 ' + wsCount + '件のワークスペース\nページをリロードします。');
+                    location.reload();
+                    return;
+                }
+
+                // v2.3 / v2.0 - 旧形式復元（現在のワークスペースに読み込む）
                 if (data.customers) saveCustomers(data.customers);
                 if (data.routes) saveRoutes(data.routes);
                 if (data.segments) saveSegments(data.segments);
                 if (data.expenses) saveExpenses(data.expenses);
                 if (data.settings) {
-                    const current = getSettings();
-                    data.settings.apiKey = current.apiKey;
+                    var currentSettings = getSettings();
+                    data.settings.apiKey = currentSettings.apiKey;
                     saveSettings(data.settings);
                 }
-                const wsName = data.workspaceName || '';
-                alert(`📂 バックアップを復元しました！${wsName ? '\n📅 ' + wsName : ''}\nページをリロードします。`);
+                var wsName = data.workspaceName || '';
+                alert('📂 バックアップを復元しました！' + (wsName ? '\n📅 ' + wsName : '') + '\nページをリロードします。');
                 location.reload();
             } catch (err) {
                 alert('❌ バックアップファイルの読み込みに失敗しました。');
