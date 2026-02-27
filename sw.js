@@ -8,7 +8,7 @@
 // v2.2.3 CDNリソースのキャッシュ対応修正（Excel読込エラー修正）
 // ============================================
 
-const CACHE_NAME = 'maintenance-map-v2.2.3';
+const CACHE_NAME = 'maintenance-map-v2.4.0';
 const urlsToCache = [
     './',
     './index.html',
