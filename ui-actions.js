@@ -1,8 +1,9 @@
 // ============================================
-// メンテナンスマップ v2.3 - ui-actions.js
+// メンテナンスマップ v2.5 - ui-actions.js
 // グローバルUI関数（モーダル・メニュー・パネル制御）
 // v2.0新規作成 - map-core.jsから分離
 // v2.3追加 - ワークスペース切り替えUI
+// v2.5追加 - 目的(purpose)フィールド対応
 // ============================================
 
 // =============================================
@@ -196,6 +197,8 @@ function hideAddModal() {
     ['addCompany','addAddress','addPhone','addContact','addNote'].forEach(id => {
         document.getElementById(id).value = '';
     });
+    // v2.5追加 - 目的もリセット
+    document.getElementById('addPurpose').value = '';
 }
 
 // v2.0 - 新規追加実行
@@ -211,6 +214,7 @@ function addNewLocation() {
         phone: document.getElementById('addPhone').value.trim(),
         contact: document.getElementById('addContact').value.trim(),
         note: document.getElementById('addNote').value.trim(),
+        purpose: document.getElementById('addPurpose').value,
         unitCount: 1
     });
     hideAddModal();
@@ -234,7 +238,8 @@ function saveEdit() {
         note: document.getElementById('editNote').value.trim(),
         status: document.getElementById('editStatus').value,
         routeId: document.getElementById('editRoute').value || null,
-        appoDate: document.getElementById('editAppoDate').value || null
+        appoDate: document.getElementById('editAppoDate').value || null,
+        purpose: document.getElementById('editPurpose').value
     });
     hideEditModal();
     MapCore.refreshAllMarkers();
