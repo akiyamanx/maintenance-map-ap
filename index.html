@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>メンテナンスマップ v2.3</title>
+    <title>メンテナンスマップ v2.5</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1a56db">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -23,7 +23,7 @@
             <div class="splash-icon">📍</div>
             <h1 class="splash-title">メンテナンスマップ</h1>
             <p class="splash-sub">Maintenance Route Manager</p>
-            <p class="splash-ver">v2.3</p>
+            <p class="splash-ver">v2.5</p>
             <div class="splash-features">
                 <span>📊 CSV取込</span>
                 <span>🗺️ 自動マッピング</span>
@@ -153,6 +153,17 @@
                 <label>担当者</label>
                 <input type="text" id="addContact" placeholder="例：山田様">
             </div>
+            <!-- v2.5追加 - 目的フィールド -->
+            <div class="modal-row">
+                <label>目的</label>
+                <select id="addPurpose">
+                    <option value="">未設定</option>
+                    <option value="メンテナンス">メンテナンス</option>
+                    <option value="修理">修理</option>
+                    <option value="本体設置">本体設置</option>
+                    <option value="その他">その他</option>
+                </select>
+            </div>
             <div class="modal-row">
                 <label>備考</label>
                 <textarea id="addNote" placeholder="台数や機種、駐車場情報など..."></textarea>
@@ -198,6 +209,17 @@
                     <option value="pending">未アポ</option>
                     <option value="appointed">アポ済み</option>
                     <option value="completed">完了</option>
+                </select>
+            </div>
+            <!-- v2.5追加 - 目的フィールド -->
+            <div class="modal-row">
+                <label>目的</label>
+                <select id="editPurpose">
+                    <option value="">未設定</option>
+                    <option value="メンテナンス">メンテナンス</option>
+                    <option value="修理">修理</option>
+                    <option value="本体設置">本体設置</option>
+                    <option value="その他">その他</option>
                 </select>
             </div>
             <div class="modal-row">
