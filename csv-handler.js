@@ -1,11 +1,12 @@
 // ============================================
-// メンテナンスマップ v2.2.4 - csv-handler.js
+// メンテナンスマップ v2.5 - csv-handler.js
 // CSV/Excelアップロード・パース・同一住所まとめ
 // v2.0新規作成 - 分割ファイル構成対応
 // v2.2.1変更 - 営業所・型式・フィルター・都道府県の検出追加
 // v2.2.2変更 - ヘッダー行自動検出改善、mapキー名をequipTypeに統一
 // v2.2.4修正 - 「設置先TEL」が会社名列に誤判定される問題を修正
 //              電話・担当者・備考を先にチェックする判定順序に変更
+// v2.5追加 - 目的(purpose)列の自動検出対応
 // ============================================
 
 const CsvHandler = (() => {
@@ -133,7 +134,9 @@ const CsvHandler = (() => {
                 // v2.2.2変更 - 営業所・型式・交換フィルター
                 branch: colMap.branch >= 0 ? String(row[colMap.branch] || '').trim() : '',
                 equipType: colMap.equipType >= 0 ? String(row[colMap.equipType] || '').trim() : '',
-                filter: colMap.filter >= 0 ? String(row[colMap.filter] || '').trim() : ''
+                filter: colMap.filter >= 0 ? String(row[colMap.filter] || '').trim() : '',
+                // v2.5追加 - 目的
+                purpose: colMap.purpose >= 0 ? String(row[colMap.purpose] || '').trim() : ''
             };
             newCustomers.push(customer);
         }
@@ -173,7 +176,8 @@ const CsvHandler = (() => {
             prefecture: -1,
             branch: -1,
             equipType: -1,
-            filter: -1
+            filter: -1,
+            purpose: -1
         };
 
         for (let i = 0; i < header.length; i++) {
@@ -219,6 +223,10 @@ const CsvHandler = (() => {
             // v2.2.2変更 - 交換フィルター
             if (map.filter === -1 && (h.includes('フィルター') || h.includes('交換フィルター') || h.includes('filter'))) {
                 map.filter = i;
+            }
+            // v2.5追加 - 目的（メンテナンス/修理/本体設置/その他）
+            if (map.purpose === -1 && (h.includes('目的') || h.includes('purpose') || h.includes('作業内容'))) {
+                map.purpose = i;
             }
         }
 
