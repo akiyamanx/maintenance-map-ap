@@ -1,6 +1,7 @@
-// メンテナンスマップ v2.4 - data-storage.js
+// メンテナンスマップ v2.5 - data-storage.js
 // LocalStorage保存・読込・バックアップ・設定管理
 // v2.4 - 全ワークスペース一括バックアップ対応
+// v2.5 - 顧客データにpurpose(目的)フィールド追加
 const DataStorage = (() => {
     // v2.3 - ワークスペース管理キー（共通・月に依存しない）
     const WS_KEYS = {
@@ -21,7 +22,7 @@ const DataStorage = (() => {
     // v2.3 - ワークスペースIDからキーを生成（例: mm_customers_2026-02）
     function wsKey(baseName) {
         const wsId = getCurrentWorkspaceId();
-        if (!wsId) return 'mm_' + baseName; // v2.3 - マイグレーション前のフォールバック
+        if (!wsId) return 'mm_' + baseName;
         return 'mm_' + baseName + '_' + wsId;
     }
 
@@ -32,11 +33,10 @@ const DataStorage = (() => {
             routes: wsKey('routes'),
             segments: wsKey('segments'),
             expenses: wsKey('expenses'),
-            geocache: WS_KEYS.geocache,   // v2.3 - 共通
-            settings: WS_KEYS.settings     // v2.3 - 共通
+            geocache: WS_KEYS.geocache,
+            settings: WS_KEYS.settings
         };
     }
-    // v2.3 - ワークスペース管理
 
     // v2.3 - ワークスペース一覧を取得
     function getWorkspaces() {
@@ -57,22 +57,19 @@ const DataStorage = (() => {
     // v2.3 - 新しいワークスペースを作成
     function createWorkspace(yearMonth, name) {
         const workspaces = getWorkspaces();
-        // v2.3 - 同じIDが既にあれば作成しない
         if (workspaces.find(ws => ws.id === yearMonth)) {
             console.warn('ワークスペース既に存在:', yearMonth);
             return null;
         }
         const ws = {
-            id: yearMonth,         // 例: "2026-02"
+            id: yearMonth,
             name: name || yearMonth.replace(/^(\d{4})-(\d{2})$/, (_, y, m) => `${y}年${parseInt(m)}月`),
             createdAt: new Date().toISOString()
         };
         workspaces.push(ws);
-        // v2.3 - 日付順にソート
         workspaces.sort((a, b) => a.id.localeCompare(b.id));
         saveWorkspaces(workspaces);
 
-        // v2.3 - デフォルトルートを新ワークスペースに設定
         const routeKey = 'mm_routes_' + yearMonth;
         if (!localStorage.getItem(routeKey)) {
             localStorage.setItem(routeKey, JSON.stringify([...DEFAULT_ROUTES]));
@@ -96,11 +93,9 @@ const DataStorage = (() => {
         let workspaces = getWorkspaces();
         workspaces = workspaces.filter(ws => ws.id !== wsId);
         saveWorkspaces(workspaces);
-        // v2.3 - 関連データも削除
         WS_DATA_KEYS.forEach(key => {
             localStorage.removeItem('mm_' + key + '_' + wsId);
         });
-        // v2.3 - 削除したのが現在のワークスペースなら、最初のに切り替え
         if (getCurrentWorkspaceId() === wsId) {
             if (workspaces.length > 0) {
                 localStorage.setItem(WS_KEYS.currentWs, workspaces[0].id);
@@ -122,14 +117,11 @@ const DataStorage = (() => {
 
     // v2.3 - 初回マイグレーション（旧キー→ワークスペース形式に変換）
     function migrateIfNeeded() {
-        // v2.3 - 既にワークスペースが存在すればスキップ
         if (getWorkspaces().length > 0) return;
 
-        // v2.3 - 旧データが存在するかチェック
         const oldCustomers = localStorage.getItem('mm_customers');
         const oldRoutes = localStorage.getItem('mm_routes');
         if (!oldCustomers && !oldRoutes) {
-            // v2.3 - 旧データなし→今月のワークスペースだけ作って終了
             const now = new Date();
             const currentMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
             createWorkspace(currentMonth);
@@ -137,15 +129,11 @@ const DataStorage = (() => {
             return;
         }
 
-        // v2.3 - 旧データを今月のワークスペースに移行
         const now = new Date();
         const currentMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
-
-        // v2.3 - ワークスペース作成
         createWorkspace(currentMonth);
         localStorage.setItem(WS_KEYS.currentWs, currentMonth);
 
-        // v2.3 - 旧キー→新キーにコピー
         const migrations = [
             { old: 'mm_customers', new: 'mm_customers_' + currentMonth },
             { old: 'mm_routes', new: 'mm_routes_' + currentMonth },
@@ -157,11 +145,9 @@ const DataStorage = (() => {
             const data = localStorage.getItem(m.old);
             if (data) {
                 localStorage.setItem(m.new, data);
-                localStorage.removeItem(m.old); // v2.3 - 旧キーを削除
+                localStorage.removeItem(m.old);
             }
         });
-
-        // v2.3 - マイグレーション完了
     }
 
     // --- 顧客データ ---
@@ -193,6 +179,7 @@ const DataStorage = (() => {
         customer.status = customer.status || 'pending';
         customer.routeId = customer.routeId || null;
         customer.appoDate = customer.appoDate || null;
+        customer.purpose = customer.purpose || '';
         customer.createdAt = new Date().toISOString();
         customers.push(customer);
         saveCustomers(customers);
@@ -220,7 +207,6 @@ const DataStorage = (() => {
 
     // --- ルートデータ ---
 
-    // v2.0.1更新 - ルート定義（10ルート、v1.0互換）
     const DEFAULT_ROUTES = [
         { id: 'route_1', name: 'ルート1', color: '#4285f4', order: [] },
         { id: 'route_2', name: 'ルート2', color: '#ea4335', order: [] },
@@ -262,9 +248,8 @@ const DataStorage = (() => {
         localStorage.setItem(getKeys().segments, JSON.stringify(segments));
     }
 
-    // --- ジオコーディングキャッシュ（v2.3 ワークスペース共通） ---
+    // --- ジオコーディングキャッシュ ---
 
-    // v2.0 - キャッシュ取得
     function getGeoCache() {
         try {
             const data = localStorage.getItem(WS_KEYS.geocache);
@@ -274,16 +259,14 @@ const DataStorage = (() => {
         }
     }
 
-    // v2.0 - キャッシュに座標保存
     function setGeoCache(address, latLng) {
         const cache = getGeoCache();
         cache[address] = latLng;
         localStorage.setItem(WS_KEYS.geocache, JSON.stringify(cache));
     }
 
-    // --- 設定（v2.3 ワークスペース共通） ---
+    // --- 設定 ---
 
-    // v2.0 - 設定取得
     function getSettings() {
         try {
             const data = localStorage.getItem(WS_KEYS.settings);
@@ -293,12 +276,11 @@ const DataStorage = (() => {
         }
     }
 
-    // v2.0 - 設定保存
     function saveSettings(settings) {
         localStorage.setItem(WS_KEYS.settings, JSON.stringify(settings));
     }
 
-    // --- 精算書データ（v2.1追加、v2.3でワークスペース対応） ---
+    // --- 精算書データ ---
 
     function getExpenses() {
         try {
@@ -339,12 +321,10 @@ const DataStorage = (() => {
 
     // --- バックアップ ---
 
-    // v2.4更新 - JSONバックアップエクスポート（全ワークスペース一括保存）
     function exportBackup() {
         var workspaces = getWorkspaces();
         var currentWsId = getCurrentWorkspaceId();
 
-        // v2.4 - 全ワークスペースのデータを収集
         var allWorkspaceData = [];
         workspaces.forEach(function(ws) {
             var prefix = 'mm_';
@@ -399,7 +379,6 @@ const DataStorage = (() => {
                     return;
                 }
 
-                // v2.4 - 全ワークスペース一括復元
                 if (data.version === '2.4' && data.allWorkspaceData) {
                     if (data.workspaces) {
                         saveWorkspaces(data.workspaces);
@@ -426,7 +405,6 @@ const DataStorage = (() => {
                     return;
                 }
 
-                // v2.3 / v2.0 - 旧形式復元（現在のワークスペースに読み込む）
                 if (data.customers) saveCustomers(data.customers);
                 if (data.routes) saveRoutes(data.routes);
                 if (data.segments) saveSegments(data.segments);
@@ -448,9 +426,6 @@ const DataStorage = (() => {
         event.target.value = '';
     }
 
-    // v2.3 - v1.0→v2.0データ変換はv1-converter.jsに分離（500行ルール対応）
-    // convertV1toV2()はグローバル関数として利用可能
-
     function updateRouteOrder(routeId, orderArray) {
         const routes = getRoutes();
         const route = routes.find(r => r.id === routeId);
@@ -460,33 +435,23 @@ const DataStorage = (() => {
         }
     }
 
-    // v2.3更新 - 現在のワークスペースのデータのみリセット
     function resetAll() {
         const KEYS = getKeys();
         localStorage.removeItem(KEYS.customers);
         localStorage.removeItem(KEYS.routes);
         localStorage.removeItem(KEYS.segments);
         localStorage.removeItem(KEYS.expenses);
-        // v2.0 - 設定とキャッシュは残す（v2.3: ワークスペース共通なので残す）
     }
 
     return {
-        // v2.3 - ワークスペース管理
         getWorkspaces, createWorkspace, switchWorkspace, deleteWorkspace,
         renameWorkspace, getCurrentWorkspaceId, migrateIfNeeded,
-        // v2.0 - 顧客
         getCustomers, saveCustomers, addCustomer, updateCustomer, deleteCustomer,
-        // v2.0 - ルート
         getRoutes, saveRoutes, DEFAULT_ROUTES, updateRouteOrder,
-        // v2.0 - 区間
         getSegments, saveSegments,
-        // v2.0 - キャッシュ
         getGeoCache, setGeoCache,
-        // v2.0 - 設定
         getSettings, saveSettings,
-        // v2.1 - 精算書
         getExpenses, saveExpenses, addExpense, deleteExpense,
-        // v2.0 - バックアップ
         exportBackup, importBackup, resetAll
     };
 })();
