@@ -1,8 +1,9 @@
 // ============================================
-// メンテナンスマップ v2.2.2 - map-core.js
+// メンテナンスマップ v2.5 - map-core.js
 // Google Maps初期化・ピン管理・ジオコーディング
 // v2.0新規作成 - 分割ファイル構成対応
 // v2.2.1変更 - ポップアップに営業所・型式・フィルター表示＋訪問順ドロップダウン追加
+// v2.5追加 - 編集モーダルで目的(purpose)フィールド対応
 // v2.2.2変更 - 訪問順ドロップダウンを「並べ替え」ボタンに変更
 // ============================================
 
@@ -408,6 +409,8 @@ const MapCore = (() => {
         document.getElementById('editNote').value = customer.note || '';
         document.getElementById('editStatus').value = customer.status || 'pending';
         document.getElementById('editAppoDate').value = customer.appoDate || '';
+        // v2.5追加 - 目的フィールド
+        document.getElementById('editPurpose').value = customer.purpose || '';
 
         // v2.0 - ルート選択肢を設定
         const routes = DataStorage.getRoutes();
